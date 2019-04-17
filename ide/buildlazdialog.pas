@@ -58,7 +58,7 @@ uses
   CodeToolManager, DefineTemplates,
   // IDEIntf
   LazIDEIntf, IDEMsgIntf, IDEHelpIntf, IDEImagesIntf, IDEWindowIntf, IDEDialogs,
-  PackageIntf, IDEExternToolIntf,
+  PackageIntf, IDEExternToolIntf, BaseIDEIntf,
   // IDE
   LazarusIDEStrConsts, TransferMacros, LazConf, DialogProcs,
   MainBar, EnvironmentOpts,
@@ -419,6 +419,9 @@ var
   IdeBuildMode: TIdeBuildMode;
   s: String;
   DefaultTargetFilename: String;
+  {$IFDEF WINDOWS}
+  env: TStringList;
+  {$ENDIF}
 begin
   // Get target files and directories.
   Result:=mrCancel;
@@ -437,8 +440,14 @@ begin
     EnvironmentOverrides.Values['LCL_PLATFORM']:=LCLPlatformDirNames[Profile.TargetPlatform];
     EnvironmentOverrides.Values['LANG']:= 'en_US';
     s:=EnvironmentOptions.GetParsedCompilerFilename;
-    if s<>'' then
+    if s<>'' then begin
       EnvironmentOverrides.Values['PP']:=s;
+      {$IFDEF WINDOWS}
+      env := EnvironmentAsStringList;
+      EnvironmentOverrides.Values['PATH']:= ExtractFileDir(s) + ';' + env.Values['PATH'];
+      env.Free;
+      {$ENDIF}
+    end;
 
     Executable:=EnvironmentOptions.GetParsedMakeFilename;
     if (Executable<>'') and (not FileExistsUTF8(Executable)) then
