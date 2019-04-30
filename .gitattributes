@@ -4,6 +4,7 @@
 /COPYING.modifiedLGPL.txt -text svneol=unset#application/octet-stream
 /COPYING.txt svneol=native#text/plain
 /README.txt svneol=native#text/plain
+tools/install/win/ChineseSimplified_from_inno_6_0.isl svneol=native#text/plain
 components/lazdebuggergdbmi/apps/lazgdebugcontrol/LazGDeBugControl.lpi svneol=native#text/plain
 components/lazdebuggergdbmi/apps/lazgdebugcontrol/LazGDeBugControl.lpr svneol=native#text/plain
 components/IdeInspector/ideinspectkeygrapper.lfm svneol=native#text/plain
