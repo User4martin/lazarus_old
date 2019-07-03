@@ -2936,6 +2936,7 @@ var
 var
   S: String;
   idx: Integer;
+  GotGDB: Boolean;
   {$IFDEF DBG_ASYNC_WAIT}
   GotPrompt: integer;
   {$ENDIF}
@@ -2948,6 +2949,7 @@ begin
   AResult.State := dsNone;
   InLogWarning := False;
   FGotStopped := False;
+  GotGDB := False;
   FLogWarnings := '';
   AStoppedParams := '';
   while FTheDebugger.DebugProcessRunning and not(FTheDebugger.State in [dsError, dsDestroying]) do
@@ -2987,8 +2989,10 @@ begin
           break;
       end;
       {$ELSE}
-      Break;
+      GotGDB := True;
       {$ENDIF}
+    if GotGDB and (FGotStopped or (AResult.State in [dsStop, dsError{, dsIdle}])) then
+      break;
 
     while S <> '' do
     begin
@@ -3020,6 +3024,8 @@ begin
       end;
       Break;
     end;
+    if GotGDB and (FGotStopped or (AResult.State in [dsStop, dsError{, dsIdle}])) then
+      break;
 
     if ForceStop or (FTheDebugger.FAsyncModeEnabled and FGotStopped) then begin
       // There should not be a "(gdb) ",
