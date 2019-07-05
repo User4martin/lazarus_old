@@ -2933,10 +2933,15 @@ var
 *)
   end;
 
+(* "(gdb )" prompt handling
+   In async mode there SHOULD NOT BE a (gdb) prompt.
+   But one might be received, either:
+   - a duplicated prompt after -exec-continue&
+   - an unexpected prompt afetr *stopped
+*)
 var
   S: String;
   idx: Integer;
-  GotGDB: Boolean;
   {$IFDEF DBG_ASYNC_WAIT}
   GotPrompt: integer;
   {$ENDIF}
@@ -2949,7 +2954,6 @@ begin
   AResult.State := dsNone;
   InLogWarning := False;
   FGotStopped := False;
-  GotGDB := False;
   FLogWarnings := '';
   AStoppedParams := '';
   while FTheDebugger.DebugProcessRunning and not(FTheDebugger.State in [dsError, dsDestroying]) do
@@ -2989,10 +2993,12 @@ begin
           break;
       end;
       {$ELSE}
-      GotGDB := True;
+      begin
+        if not FTheDebugger.FAsyncModeEnabled then
+          break;
+        // In Async mode ignore the prompt. Wait for *stopped
+      end;
       {$ENDIF}
-    if GotGDB and (FGotStopped or (AResult.State in [dsStop, dsError{, dsIdle}])) then
-      break;
 
     while S <> '' do
     begin
@@ -3024,18 +3030,15 @@ begin
       end;
       Break;
     end;
-    if GotGDB and (FGotStopped or (AResult.State in [dsStop, dsError{, dsIdle}])) then
-      break;
 
     if ForceStop or (FTheDebugger.FAsyncModeEnabled and FGotStopped) then begin
       // There should not be a "(gdb) ",
       // but some versions print it, as they run none async, after accepting "run &"
       S := FTheDebugger.ReadLine(True, 50);
       if FTheDebugger.ReadLineTimedOut then break;
-      if (S = '(gdb) ') then begin
+      if (S = '(gdb) ') then
         FTheDebugger.ReadLine(50); // read the extra "(gdb) "
-        break;
-      end;
+      break;
       // since no command was sent, we can loop
     end;
 
