@@ -443,6 +443,7 @@ begin
   Exec := TEMSTPSTestExec.Create;
 end;
 
+  type THackTEMSEditorMacro = class(TEMSEditorMacro) end;
 function DoSelfTest: Boolean;
 var
   m: TEMSEditorMacro;
@@ -535,7 +536,7 @@ var
     syn.ClearAll;
     syn.Text := AInit;
     RunMacro(AText);
-    AssertEQ(Msg , True, pos(Exp, syn.Text) > 0);
+    AssertEQ(Msg + ' : ' + dbgs(m.IsInvalid) + ' ' + THackTEMSEditorMacro(m).GetErrorMsg + ' // '+ syn.Text , True, pos(Exp, syn.Text) > 0);
   end;
 
 begin
