@@ -49,7 +49,7 @@ type
 
   TElfFile = class(TObject)
   private
-    FTarget: TTargetDescriptor;
+    FTargetInfo: TTargetDescriptor;
     function FElfToMachineType(machinetype: word): TMachineType;
   protected
     function Load32BitFile(ALoader: TDbgFileLoader): Boolean;
@@ -135,13 +135,13 @@ begin
   end;
 
   // If OS is not encoded in header, take some guess based on machine type
-  if FTarget.OS = osNone then
+  if FTargetInfo.OS = osNone then
   begin
     if result = mtAVR8 then
-      FTarget.OS := osEmbedded
+      FTargetInfo.OS := osEmbedded
     else
       // Default to the same as host...
-      FTarget.OS := {$if defined(Linux)}osLinux
+      FTargetInfo.OS := {$if defined(Linux)}osLinux
                     {$elseif defined(Darwin)}osDarwin
                     {$else}osWindows{$endif};
   end;
@@ -159,7 +159,7 @@ begin
   Result := ALoader.Read(0, sizeof(hdr), @hdr) = sizeof(hdr);
   if not Result then Exit;
 
-  FTarget.machineType := FElfToMachineType(hdr.e_machine);
+  FTargetInfo.machineType := FElfToMachineType(hdr.e_machine);
 
   SetLength(sect, hdr.e_shnum);
   //ALoader.Position := hdr.e_shoff;
@@ -198,7 +198,7 @@ begin
   Result := ALoader.Read(0, sizeof(hdr), @hdr) = sizeof(hdr);
   if not Result then Exit;
 
-  FTarget.machineType := FElfToMachineType(hdr.e_machine);
+  FTargetInfo.machineType := FElfToMachineType(hdr.e_machine);
 
   SetLength(sect, hdr.e_shnum);
   //ALoader.Position := hdr.e_shoff;
@@ -255,27 +255,27 @@ begin
 
     Result := False;
     case ident[EI_DATA] of
-      ELFDATA2LSB: FTarget.ByteOrder := boLSB;
-      ELFDATA2MSB: FTarget.ByteOrder := boMSB;
+      ELFDATA2LSB: FTargetInfo.ByteOrder := boLSB;
+      ELFDATA2MSB: FTargetInfo.ByteOrder := boMSB;
     else
-      FTarget.byteOrder := boNone;
+      FTargetInfo.byteOrder := boNone;
     end;
 
     case ident[EI_OSABI] of
-      ELFOSABI_LINUX: FTarget.OS := osLinux;
-      ELFOSABI_STANDALONE: FTarget.OS := osEmbedded;
+      ELFOSABI_LINUX: FTargetInfo.OS := osLinux;
+      ELFOSABI_STANDALONE: FTargetInfo.OS := osEmbedded;
     else
-      FTarget.OS := osNone;  // Will take a guess after machine type is available
+      FTargetInfo.OS := osNone;  // Will take a guess after machine type is available
     end;
 
     if ident[EI_CLASS] = ELFCLASS32 then begin
-      FTarget.bitness := b32;
+      FTargetInfo.bitness := b32;
       Result := Load32BitFile(ALoader);
       exit;
     end;
 
     if ident[EI_CLASS] = ELFCLASS64 then begin
-      FTarget.bitness := b64;
+      FTargetInfo.bitness := b64;
       Result := Load64BitFile(ALoader);
       exit;
     end;
@@ -366,7 +366,7 @@ begin
     FSections.Objects[idx] := TObject(p);
   end;
 
-  FTarget := fElfFile.FTarget;
+  FTargetInfo := fElfFile.FTargetInfo;
 
   inherited Create(ASource, ADebugMap, OwnSource);
 end;
@@ -399,7 +399,7 @@ begin
   if assigned(p) and assigned(ps) then
   begin
     SymbolStr:=PDbgImageSectionEx(ps)^.Sect.RawData;
-    if FTarget.Bitness = b64 then
+    if FTargetInfo.Bitness = b64 then
     begin
       SymbolArr64:=PDbgImageSectionEx(p)^.Sect.RawData;
       SymbolCount := PDbgImageSectionEx(p)^.Sect.Size div sizeof(TElf64symbol);

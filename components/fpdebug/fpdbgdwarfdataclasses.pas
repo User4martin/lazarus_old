@@ -3168,7 +3168,7 @@ var
   i: Integer;
 begin
   inherited Create(ALoaderList);
-  FTarget := ALoaderList.Target;
+  FTargetInfo := ALoaderList.TargetInfo;
   FCompilationUnits := TList.Create;
   FImageBase := ALoaderList.ImageBase;
 

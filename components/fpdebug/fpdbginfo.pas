@@ -478,7 +478,7 @@ type
   private
     FHasInfo: Boolean;
   protected
-    FTarget: TTargetDescriptor;
+    FTargetInfo: TTargetDescriptor;
     procedure SetHasInfo;
   public
     constructor Create({%H-}ALoaderList: TDbgImageLoaderList); virtual;
@@ -495,7 +495,7 @@ type
     property HasInfo: Boolean read FHasInfo;
     function GetLineAddresses(const AFileName: String; ALine: Cardinal; var AResultList: TDBGPtrArray): Boolean; virtual;
     //property MemManager: TFpDbgMemReaderBase read GetMemManager write SetMemManager;
-    property Target: TTargetDescriptor read FTarget write FTarget;
+    property TargetInfo: TTargetDescriptor read FTargetInfo write FTargetInfo;
   end;
 
 function dbgs(ADbgSymbolKind: TDbgSymbolKind): String; overload;

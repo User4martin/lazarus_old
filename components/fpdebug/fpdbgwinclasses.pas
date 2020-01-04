@@ -191,7 +191,7 @@ type
     class function StartInstance(AFileName: string; AParams, AnEnvironment: TStrings; AWorkingDirectory, AConsoleTty: string; AFlags: TStartInstanceFlags; AnOsClasses: TOSDbgClasses): TDbgProcess; override;
     class function AttachToInstance(AFileName: string; APid: Integer; AnOsClasses: TOSDbgClasses): TDbgProcess; override;
 
-    class function isSupported(target: TTargetDescriptor): boolean; override;
+    class function isSupported(ATargetInfo: TTargetDescriptor): boolean; override;
 
     function Continue(AProcess: TDbgProcess; AThread: TDbgThread; SingleStep: boolean): boolean; override;
     function Detach(AProcess: TDbgProcess; AThread: TDbgThread): boolean; override;
@@ -660,10 +660,11 @@ begin
   // TODO: change the filename to the actual exe-filename. Load the correct dwarf info
 end;
 
-class function TDbgWinProcess.isSupported(target: TTargetDescriptor): boolean;
+class function TDbgWinProcess.isSupported(ATargetInfo: TTargetDescriptor
+  ): boolean;
 begin
-  result := (target.OS = osWindows) and
-            (target.machineType in [mt386, mtX86_64]);
+  result := (ATargetInfo.OS = osWindows) and
+            (ATargetInfo.machineType in [mt386, mtX86_64]);
 end;
 
 function TDbgWinProcess.Continue(AProcess: TDbgProcess; AThread: TDbgThread;

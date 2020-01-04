@@ -95,7 +95,7 @@ constructor TFpSymbolContext.Create(AFpSymbolInfo: TFpSymbolInfo);
 begin
   inherited create;
   FFpSymbolInfo:=AFpSymbolInfo;
-  if AFpSymbolInfo.Target.bitness = b64 then
+  if AFpSymbolInfo.TargetInfo.bitness = b64 then
     FSizeOfAddress:=8
   else
     FSizeOfAddress:=4;
@@ -131,7 +131,7 @@ begin
   FSymbolList := TfpSymbolList.Create;
   for i := 0 to ALoaderList.Count-1 do
     ALoaderList[i].ParseSymbolTable(FSymbolList);
-  FTarget := ALoaderList.Target;
+  FTargetInfo := ALoaderList.TargetInfo;
   if FSymbolList.Count > 0 then
     SetHasInfo;
 end;

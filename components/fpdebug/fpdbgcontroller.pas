@@ -880,7 +880,7 @@ procedure TDbgController.CheckExecutableAndLoadClasses;
 var
   source: TDbgFileLoader;
   imgReader: TDbgImageReader;
-  target: TTargetDescriptor;
+  ATargetInfo: TTargetDescriptor;
 begin
   if (FExecutableFilename <> '') and FileExists(FExecutableFilename) then
   begin
@@ -889,16 +889,16 @@ begin
       source := TDbgFileLoader.Create(FExecutableFilename);
       imgReader := GetImageReader(source, nil, false);
 
-      target := imgReader.Target;
+      ATargetInfo := imgReader.TargetInfo;
     finally
       FreeAndNil(imgReader);  // TODO: Store object reference, it will be needed again
       FreeAndNil(source);
     end;
   end
   else
-    target := hostDescriptor;
+    ATargetInfo := hostDescriptor;
 
-  FOsDbgClasses := FpDbgClasses.GetDbgProcessClass(target);
+  FOsDbgClasses := FpDbgClasses.GetDbgProcessClass(ATargetInfo);
 end;
 
 procedure TDbgController.SetExecutableFilename(AValue: string);
@@ -1302,10 +1302,10 @@ begin
 
         DebugLn(DBG_WARNINGS and (not Assigned(FCurrentProcess.DbgInfo) or not(FCurrentProcess.DbgInfo.HasInfo)),
           ['TDbgController.SendEvents called - deCreateProcess - No debug info. [CurrentProcess=',dbgsname(FCurrentProcess),',DbgInfo=',dbgsname(FCurrentProcess.DbgInfo),']']);
-        DebugLn(DBG_VERBOSE, Format('  Target.MachineType = %d', [FCurrentProcess.DbgInfo.Target.machineType]));
-        DebugLn(DBG_VERBOSE, Format('  Target.Bitness     = %d', [FCurrentProcess.DbgInfo.Target.bitness]));
-        DebugLn(DBG_VERBOSE, Format('  Target.byteOrder   = %d', [FCurrentProcess.DbgInfo.Target.byteOrder]));
-        DebugLn(DBG_VERBOSE, Format('  Target.OS          = %d', [FCurrentProcess.DbgInfo.Target.OS]));
+        DebugLn(DBG_VERBOSE, Format('  Target.MachineType = %d', [FCurrentProcess.DbgInfo.TargetInfo.machineType]));
+        DebugLn(DBG_VERBOSE, Format('  Target.Bitness     = %d', [FCurrentProcess.DbgInfo.TargetInfo.bitness]));
+        DebugLn(DBG_VERBOSE, Format('  Target.byteOrder   = %d', [FCurrentProcess.DbgInfo.TargetInfo.byteOrder]));
+        DebugLn(DBG_VERBOSE, Format('  Target.OS          = %d', [FCurrentProcess.DbgInfo.TargetInfo.OS]));
 
         DoOnDebugInfoLoaded(self);
 

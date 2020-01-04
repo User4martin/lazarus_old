@@ -191,7 +191,7 @@ begin
   if (hBase = nil) or (hBase^.e_magic <> IMAGE_DOS_SIGNATURE) then
     exit;
 
-  if Target.bitness = b64 then begin
+  if TargetInfo.bitness = b64 then begin
     header64 := PImageNtHeaders64(PByte(hBase) + hBase^.e_lfanew);
     if (header64^.Signature <> IMAGE_NT_SIGNATURE) or
        (header64^.OptionalHeader.NumberOfRvaAndSizes = 0)
@@ -333,10 +333,10 @@ var
   StringTableLen: DWord;
   StringTableStart: QWord;
 begin
-  FTarget.machineType := mtNONE;
-  FTarget.bitness     := bNone;
-  FTarget.byteOrder   := boNone;
-  FTarget.OS          := osNone;
+  FTargetInfo.machineType := mtNONE;
+  FTargetInfo.bitness     := bNone;
+  FTargetInfo.byteOrder   := boNone;
+  FTargetInfo.OS          := osNone;
 
   FFileLoader.Read(0, sizeof(DosHeader), @DosHeader);
   if (DosHeader.e_magic <> IMAGE_DOS_SIGNATURE)
@@ -352,36 +352,36 @@ begin
     //WriteLn('Invalid NT header: ', IntToHex(NtHeaders^.Signature, 8));
     Exit;
   end;
-  FTarget.OS := osWindows;
+  FTargetInfo.OS := osWindows;
 
   case NtHeaders.Sys.FileHeader.Machine of
     IMAGE_FILE_MACHINE_I386:
     begin
-      FTarget.machineType := mt386;
-      FTarget.byteOrder := boLSB;
+      FTargetInfo.machineType := mt386;
+      FTargetInfo.byteOrder := boLSB;
     end;
     IMAGE_FILE_MACHINE_ARM:
     begin
-      FTarget.machineType := mtARM;
-      FTarget.byteOrder := boLSB;
+      FTargetInfo.machineType := mtARM;
+      FTargetInfo.byteOrder := boLSB;
     end;
     IMAGE_FILE_MACHINE_IA64, IMAGE_FILE_MACHINE_AMD64:
     begin
-      FTarget.machineType := mtX86_64;
-      FTarget.byteOrder := boLSB;
+      FTargetInfo.machineType := mtX86_64;
+      FTargetInfo.byteOrder := boLSB;
     end;
   else
-    FTarget.OS := osNone;
+    FTargetInfo.OS := osNone;
   end;
 
   case NtHeaders.Sys.OptionalHeader.Magic of
-    IMAGE_NT_OPTIONAL_HDR32_MAGIC: FTarget.Bitness := b32;
-    IMAGE_NT_OPTIONAL_HDR64_MAGIC: Ftarget.Bitness := b64;
+    IMAGE_NT_OPTIONAL_HDR32_MAGIC: FTargetInfo.Bitness := b32;
+    IMAGE_NT_OPTIONAL_HDR64_MAGIC: FTargetInfo.Bitness := b64;
   else
-    FTarget.Bitness := bNone;
+    FTargetInfo.Bitness := bNone;
   end;
 
-  if FTarget.Bitness = b64
+  if FTargetInfo.Bitness = b64
   then SetImageBase(NtHeaders.W64.OptionalHeader.ImageBase)
   else SetImageBase(NtHeaders.W32.OptionalHeader.ImageBase);
   FCodeBase := NtHeaders.W32.OptionalHeader.BaseOfCode;

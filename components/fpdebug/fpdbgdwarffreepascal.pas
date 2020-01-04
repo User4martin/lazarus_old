@@ -415,7 +415,7 @@ var
   d, i: Integer;
   ParentFpSym: TFpSymbolDwarf;
 begin
-  if Dwarf.Target.bitness = b64 then begin
+  if Dwarf.TargetInfo.bitness = b64 then begin
     RegFP := RegFp64;
     RegPc := RegPc64;
   end

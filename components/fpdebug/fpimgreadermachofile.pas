@@ -22,7 +22,7 @@ type
   TMachOFile = class(TObject)
   private
     cmdbuf    : array of byte;
-    FTarget   : TTargetDescriptor;
+    FTargetInfo   : TTargetDescriptor;
   public
     header    : mach_header;
     commands  : array of pload_command;
@@ -31,7 +31,7 @@ type
     constructor Create;
     destructor Destroy; override;
     function  LoadFromFile(ALoader: TDbgFileLoader): Boolean;
-    property Target: TTargetDescriptor read FTarget;
+    property TargetInfo: TTargetDescriptor read FTargetInfo;
   end;
 
 
@@ -74,24 +74,24 @@ begin
   if i64 then
   begin
     hs := sizeof(mach_header_64);
-    FTarget.bitness := b64;
+    FTargetInfo.bitness := b64;
   end
   else
   begin
     hs := SizeOf(mach_header);
-    FTarget.bitness := b32;
+    FTargetInfo.bitness := b32;
   end;
   case header.cputype of
-    CPU_TYPE_I386       : FTarget.MachineType := mt386;
-    CPU_TYPE_ARM        : FTarget.MachineType := mtARM;
-    CPU_TYPE_SPARC      : FTarget.MachineType := mtSPARC;
-    //CPU_TYPE_ALPHA      : FTarget.MachineType := mtALPHA;
-    CPU_TYPE_POWERPC    : FTarget.MachineType := mtPPC;
-    CPU_TYPE_POWERPC64  : FTarget.MachineType := mtPPC;
-    CPU_TYPE_X86_64     : FTarget.MachineType := mtX86_64;
-    CPU_TYPE_ARM64      : FTarget.MachineType := mtARM;
+    CPU_TYPE_I386       : FTargetInfo.MachineType := mt386;
+    CPU_TYPE_ARM        : FTargetInfo.MachineType := mtARM;
+    CPU_TYPE_SPARC      : FTargetInfo.MachineType := mtSPARC;
+    //CPU_TYPE_ALPHA      : FTargetInfo.MachineType := mtALPHA;
+    CPU_TYPE_POWERPC    : FTargetInfo.MachineType := mtPPC;
+    CPU_TYPE_POWERPC64  : FTargetInfo.MachineType := mtPPC;
+    CPU_TYPE_X86_64     : FTargetInfo.MachineType := mtX86_64;
+    CPU_TYPE_ARM64      : FTargetInfo.MachineType := mtARM;
   else
-    FTarget.machineType := mtNone;
+    FTargetInfo.machineType := mtNone;
   end;
 
   SetLength(cmdbuf, header.sizeofcmds);

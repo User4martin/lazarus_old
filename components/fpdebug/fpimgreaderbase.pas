@@ -93,7 +93,7 @@ type
     FReaderErrors: String;
     FUUID: TGuid;
   protected
-    FTarget: TTargetDescriptor;
+    FTargetInfo: TTargetDescriptor;
     function GetSubFiles: TStrings; virtual;
     function GetAddressMapList: TDbgAddressMapList; virtual;
     function GetSection(const AName: String): PDbgImageSection; virtual; abstract;
@@ -110,7 +110,7 @@ type
 
     property ImageBase: QWord read FImageBase;
 
-    property Target: TTargetDescriptor read FTarget;
+    property TargetInfo: TTargetDescriptor read FTargetInfo;
 
     property UUID: TGuid read FUUID;
     property Section[const AName: String]: PDbgImageSection read GetSection;

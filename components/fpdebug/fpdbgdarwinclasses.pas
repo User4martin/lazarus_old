@@ -147,7 +147,7 @@ type
     function CreateWatchPointData: TFpWatchPointData; override;
   public
     class function StartInstance(AFileName: string; AParams, AnEnvironment: TStrings; AWorkingDirectory, AConsoleTty: string; AFlags: TStartInstanceFlags; AnOsClasses: TOSDbgClasses): TDbgProcess; override;
-    class function isSupported(target: TTargetDescriptor): boolean; override;
+    class function isSupported(ATargetInfo: TTargetDescriptor): boolean; override;
     constructor Create(const AName: string; const AProcessID, AThreadID: Integer; AnOsClasses: TOSDbgClasses); override;
     destructor Destroy; override;
 
@@ -713,6 +713,12 @@ begin
         FpClose(AMasterPtyFd);
     end;
   end;
+end;
+
+class function TDbgDarwinProcess.isSupported(ATargetInfo: TTargetDescriptor
+  ): boolean;
+begin
+  Result := inherited isSupported(ATargetInfo);
 end;
 
 class function TDbgLinuxProcess.isSupported(target: TTargetDescriptor): boolean;

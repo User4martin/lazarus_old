@@ -63,7 +63,7 @@ type
     function GetAddressMapList: TDbgAddressMapList;
     function GetReaderErrors: String;
     function GetSubFiles: TStrings;
-    function GetTarget: TTargetDescriptor;
+    function GetTargetInfo: TTargetDescriptor;
     function GetUUID: TGuid;
   protected
     FImageBase: QWord unimplemented;
@@ -84,7 +84,7 @@ type
     function IsValid: Boolean;
     property FileName: String read FFileName; // Empty if using USE_WIN_FILE_MAPPING
     property ImageBase: QWord read FImageBase; unimplemented;
-    property Target: TTargetDescriptor read GetTarget;
+    property TargetInfo: TTargetDescriptor read GetTargetInfo;
 
     property UUID: TGuid read GetUUID;
     property Section[const AName: String]: PDbgImageSection read GetSection;
@@ -109,13 +109,13 @@ type
   TDbgImageLoaderList = class(TFPObjectList)
   private
     function GetImageBase: QWord;
-    function GetTarget: TTargetDescriptor;
+    function GetTargetInfo: TTargetDescriptor;
     function GetItem(Index: Integer): TDbgImageLoader;
     procedure SetItem(Index: Integer; AValue: TDbgImageLoader);
   public
     property Items[Index: Integer]: TDbgImageLoader read GetItem write SetItem; default;
     property ImageBase: QWord read GetImageBase;
-    property Target: TTargetDescriptor read GetTarget;
+    property TargetInfo: TTargetDescriptor read GetTargetInfo;
   end;
 
 implementation
@@ -130,10 +130,10 @@ begin
     result := 0;
 end;
 
-function TDbgImageLoaderList.GetTarget: TTargetDescriptor;
+function TDbgImageLoaderList.GetTargetInfo: TTargetDescriptor;
 begin
   if Count>0 then
-    result := Items[0].Target
+    result := Items[0].TargetInfo
   else
     Result := hostDescriptor;
 end;
@@ -159,10 +159,10 @@ end;
 
 { TDbgImageLoader }
 
-function TDbgImageLoader.GetTarget: TTargetDescriptor;
+function TDbgImageLoader.GetTargetInfo: TTargetDescriptor;
 begin
   if assigned(ImgReader) then
-    result := ImgReader.Target
+    result := ImgReader.TargetInfo
   else
     result := hostDescriptor;
 end;

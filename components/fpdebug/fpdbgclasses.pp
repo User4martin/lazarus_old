@@ -489,7 +489,7 @@ public
       AWorkingDirectory, AConsoleTty: string; AFlags: TStartInstanceFlags;
       AnOsClasses: TOSDbgClasses): TDbgProcess; virtual;
     class function AttachToInstance(AFileName: string; APid: Integer; AnOsClasses: TOSDbgClasses): TDbgProcess; virtual;
-    class function isSupported(target: TTargetDescriptor): boolean; virtual;
+    class function isSupported(ATargetInfo: TTargetDescriptor): boolean; virtual;
     constructor Create(const AFileName: string; const AProcessID, AThreadID: Integer; AnOsClasses: TOSDbgClasses); virtual;
     destructor Destroy; override;
     function  AddInternalBreak(const ALocation: TDBGPtr): TFpInternalBreakpoint; overload;
@@ -633,7 +633,7 @@ const
   DBGPTRSIZE: array[TFPDMode] of Integer = (4, 8);
   FPDEventNames: array[TFPDEvent] of string = ('deExitProcess', 'deFinishedStep', 'deBreakpoint', 'deException', 'deCreateProcess', 'deLoadLibrary', 'deUnloadLibrary', 'deInternalContinue');
 
-function GetDbgProcessClass(target: TTargetDescriptor): TOSDbgClasses;
+function GetDbgProcessClass(ATargetInfo: TTargetDescriptor): TOSDbgClasses;
 
 procedure RegisterDbgOsClasses(ADbgOsClasses: TOSDbgClasses);
 
@@ -661,7 +661,7 @@ var
   DBG_VERBOSE, DBG_WARNINGS, DBG_BREAKPOINTS, FPDBG_COMMANDS: PLazLoggerLogGroup;
   RegisteredDbgProcessClasses: TOSDbgClassesList;
 
-function GetDbgProcessClass(target: TTargetDescriptor): TOSDbgClasses;
+function GetDbgProcessClass(ATargetInfo: TTargetDescriptor): TOSDbgClasses;
 var
   i   : Integer;
 begin
@@ -669,7 +669,7 @@ begin
   begin
     Result := RegisteredDbgProcessClasses[i];
     try
-      if Result.DbgProcessClass.isSupported(target) then
+      if Result.DbgProcessClass.isSupported(ATargetInfo) then
         Exit;
     except
       on e: exception do
@@ -1378,7 +1378,7 @@ end;
 procedure TDbgInstance.LoadInfo;
 begin
   InitializeLoaders;
-  if FLoaderList.Target.bitness = b64 then  //Image64Bit then
+  if FLoaderList.TargetInfo.bitness = b64 then  //Image64Bit then
     FMode:=dm64
   else
     FMode:=dm32;
@@ -1892,7 +1892,7 @@ begin
   Result := nil;
 end;
 
-class function TDbgProcess.isSupported(target: TTargetDescriptor): boolean;
+class function TDbgProcess.isSupported(ATargetInfo: TTargetDescriptor): boolean;
 begin
   result := false;
 end;
