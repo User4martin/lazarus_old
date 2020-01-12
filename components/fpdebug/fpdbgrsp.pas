@@ -117,6 +117,11 @@ type
     property lastStatusEvent: TStatusEvent read FStatusEvent;
   end;
 
+var
+  // Difficult to see how this can be encapsulated except if
+  // added methods are introduced that needs to be called after .Create
+  HostName: string = 'localhost';
+  Port: integer = 12345;
 
 implementation
 

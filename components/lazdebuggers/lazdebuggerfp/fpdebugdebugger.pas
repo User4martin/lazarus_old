@@ -58,6 +58,8 @@ type
     FForceNewConsole: boolean;
     {$endif windows}
     FNextOnlyStopOnStartLine: boolean;
+    FHostName: string;
+    FPort: integer;
   public
     constructor Create; override;
     procedure Assign(Source: TPersistent); override;
@@ -70,7 +72,8 @@ type
     {$ifdef windows}
     property ForceNewConsole: boolean read FForceNewConsole write FForceNewConsole;
     {$endif windows}
-  end;
+    property HostName: string read FHostName write FHostName;
+    property Port: integer read FPort write FPort;  end;
 
   { TDbgControllerStepOverOrFinallyCmd
     Step over with detection for finally blocks
@@ -456,7 +459,8 @@ implementation
 uses
   FpDbgUtil,
   FpDbgDisasX86,
-  FpDbgCommon;
+  FpDbgCommon,
+  FpDbgRsp;
 
 var
   DBG_VERBOSE, DBG_BREAKPOINTS, FPDBG_COMMANDS: PLazLoggerLogGroup;
@@ -721,6 +725,8 @@ constructor TFpDebugDebuggerProperties.Create;
 begin
   inherited Create;
   FNextOnlyStopOnStartLine:=true;
+  FHostName := 'localhost';
+  FPort := 1234;
 end;
 
 procedure TFpDebugDebuggerProperties.Assign(Source: TPersistent);
@@ -732,6 +738,8 @@ begin
     {$ifdef windows}
     FForceNewConsole:=TFpDebugDebuggerProperties(Source).FForceNewConsole;
     {$endif windows}
+    FHostName := TFpDebugDebuggerProperties(Source).HostName;
+    FPort := TFpDebugDebuggerProperties(Source).Port;
   end;
 end;
 
@@ -1667,6 +1675,8 @@ end;
 
 procedure TFpDebugThread.Execute;
 begin
+  FpDbgRsp.HostName := TFpDebugDebuggerProperties(FFpDebugDebugger.GetProperties).HostName;
+  FpDbgRsp.Port := TFpDebugDebuggerProperties(FFpDebugDebugger.GetProperties).Port;
   if FFpDebugDebugger.FDbgController.Run then
     FStartSuccessfull:=true;
 
