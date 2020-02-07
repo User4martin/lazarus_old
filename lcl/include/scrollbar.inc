@@ -93,38 +93,50 @@ end;
 procedure TCustomScrollBar.SetParams(APosition, AMin, AMax, APageSize: Integer);
 var
   ScrollInfo: TScrollInfo;
+  lfMask : UINT;
 begin
   if AMax < AMin then
     raise EInvalidOperation.Create(rsScrollBarOutOfRange);
+  lfMask := 0;
+
+  { Check position within range }
   if APosition < AMin then APosition := AMin;
   if APosition > AMax then APosition := AMax;
+
   if APageSize < 0 then APageSize := 0;
-  if (FMin <> AMin) or (FMax <> AMax) or (APageSize <> FPageSize) then
-  begin
+
+  { Test values that changed }
+  if (FPosition <> APosition) then begin
+    lfMask := lfMask or SIF_POS;
+    FPosition := APosition;
+  end;
+  if (FMin <> AMin) or (FMax <> AMax) then begin
     FMin := AMin;
     FMax := AMax;
+    lfMask := lfMask or SIF_Range;
+  end;
+  if (FPageSize <> APageSize) then begin
+    lfMask := lfMask or SIF_Range;
     FPageSize := APageSize;
-    if HandleAllocated then
-    begin
-      ScrollInfo.fMask := SIF_PAGE or SIF_Range;
+  end;
+  if HandleAllocated then begin
+    if (lfMask<>0) then begin
+      if not NotRightToLeft then
+        APosition := FMax - APosition;
+      ScrollInfo.fMask := lfMask;
       ScrollInfo.nMin := AMin;
       ScrollInfo.nMax := AMax;
+      ScrollInfo.nPos := APosition;
       ScrollInfo.nPage := APageSize;
-      SetScrollInfo(Handle, SB_CTL, ScrollInfo, FPosition = APosition);
+      SetScrollInfo(Handle, SB_CTL, ScrollInfo, True);
+      if (lfMask and SIF_POS) <> 0 then
+        Change;
     end;
-  end;
-  if FPosition <> APosition then
-  begin
-    FPosition := APosition;
-    if HandleAllocated then
-      if NotRightToLeft then
-        SetScrollPos(Handle, SB_CTL, FPosition, True)
-      else
-        SetScrollPos(Handle, SB_CTL, FMax - FPosition, True);
-    Change;
-  end;
-  if HandleAllocated then
     TWSScrollBarClass(WidgetSetClass).SetParams(Self);
+  end
+  else
+  if (lfMask and SIF_POS) <> 0 then
+    Change;
 end;
 
 procedure TCustomScrollBar.SetParams(APosition, AMin, AMax: Integer);
