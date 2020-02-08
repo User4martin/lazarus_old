@@ -128,7 +128,7 @@ begin
       ScrollInfo.nMax := AMax;
       ScrollInfo.nPos := APosition;
       ScrollInfo.nPage := APageSize;
-      SetScrollInfo(Handle, SB_CTL, ScrollInfo, True);
+      TWSScrollBarClass(WidgetSetClass).SetScrollInfoBeforeParams(Handle, SB_CTL, ScrollInfo, True);
       if (lfMask and SIF_POS) <> 0 then
         Change;
     end;

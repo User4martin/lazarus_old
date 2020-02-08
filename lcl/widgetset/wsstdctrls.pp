@@ -42,7 +42,7 @@ uses
 ////////////////////////////////////////////////////
   Graphics, Controls, StdCtrls,
 ////////////////////////////////////////////////////
-  Clipbrd, LazUTF8, WSLCLClasses, WSControls, WSFactory;
+  Clipbrd, LCLType, LCLIntf, LazUTF8, WSLCLClasses, WSControls, WSFactory;
 
 type
   { TWSScrollBar }
@@ -50,6 +50,7 @@ type
   TWSScrollBar = class(TWSWinControl)
   published
     class procedure SetParams(const AScrollBar: TCustomScrollBar); virtual;
+    class procedure SetScrollInfoBeforeParams(Handle: HWND; SBStyle: Integer; ScrollInfo: TScrollInfo; Redraw : Boolean); virtual;
     class procedure SetKind(const AScrollBar: TCustomScrollBar; const AIsHorizontal: Boolean); virtual;
   end;
   TWSScrollBarClass = class of TWSScrollBar;
@@ -291,6 +292,12 @@ end;
 
 class procedure TWSScrollBar.SetParams(const AScrollBar: TCustomScrollBar);
 begin
+end;
+
+class procedure TWSScrollBar.SetScrollInfoBeforeParams(Handle: HWND;
+  SBStyle: Integer; ScrollInfo: TScrollInfo; Redraw: Boolean);
+begin
+  LCLIntf.SetScrollInfo(Handle, SBStyle, ScrollInfo, Redraw);
 end;
 
 class procedure TWSScrollBar.SetKind(const AScrollBar: TCustomScrollBar;

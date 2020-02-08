@@ -45,6 +45,8 @@ type
           const AParams: TCreateParams): HWND; override;
     class function GetDoubleBuffered(const AWinControl: TWinControl): Boolean; override;
     class procedure SetParams(const AScrollBar: TCustomScrollBar); override;
+    class procedure SetScrollInfoBeforeParams(Handle: HWND; SBStyle: Integer;
+      ScrollInfo: TScrollInfo; Redraw: Boolean); override;
   end;
 
   { TWin32WSCustomGroupBox }
@@ -511,6 +513,12 @@ begin
         SetWindowLong(Handle, GWL_STYLE, GetWindowLong(Handle, GWL_STYLE) or SBS_VERT);
     end;
   end;
+end;
+
+class procedure TWin32WSScrollBar.SetScrollInfoBeforeParams(Handle: HWND;
+  SBStyle: Integer; ScrollInfo: TScrollInfo; Redraw: Boolean);
+begin
+  //
 end;
 
 { TWin32WSCustomGroupBox }
