@@ -349,7 +349,6 @@ type
 
   TDbgInstance = class(TObject)
   private
-    FMode: TFPDMode;
     FFileName: String;
     FProcess: TDbgProcess;
     FSymbolTableInfo: TFpSymbolInfo;
@@ -358,6 +357,7 @@ type
     function GetPointerSize: Integer;
 
   protected
+    FMode: TFPDMode;
     FDbgInfo: TDbgInfo;
     procedure InitializeLoaders; virtual;
     procedure SetFileName(const AValue: String);
