@@ -248,9 +248,14 @@ var
 {$endif}
 
 { export for widgetset implementation }
+type
+  TWindowProcFlag = (wpfLclBeforeWin);
+  TWindowProcFlags = set of TWindowProcFlag;
 
 function WindowProc(Window: HWnd; Msg: UInt; WParam: Windows.WParam;
     LParam: Windows.LParam): LResult; stdcall;
+function WindowProcEx(Window: HWnd; Msg: UInt; WParam: Windows.WParam;
+    LParam: Windows.LParam; Flags: TWindowProcFlags = []): LResult; stdcall;
 function CallDefaultWindowProc(Window: HWnd; Msg: UInt; WParam: Windows.WParam;
   LParam: Windows.LParam): LResult;
 {$ifdef RedirectDestroyMessages}

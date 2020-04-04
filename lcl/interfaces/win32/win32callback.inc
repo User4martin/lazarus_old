@@ -335,6 +335,7 @@ type
     lWinControl: TWinControl;
     WinProcess: Boolean;
     NotifyUserInput: Boolean;
+    HelperFlags: TWindowProcFlags;
     WindowInfo: PWin32WindowInfo;
     // Used by SendPaintMessage
     BackupBuffer: TDoubleBuffer;
@@ -2476,7 +2477,7 @@ begin
     WinProcess := False;
   end;
 
-  if WinProcess then
+  if WinProcess and not (wpfLclBeforeWin in HelperFlags) then
   begin
     PLMsg^.Result := CallDefaultWindowProc(Window, Msg, WParam, LParam);
     WinProcess := False;
@@ -2571,6 +2572,12 @@ begin
 
   if Assigned(lWinControl) and (PLMsg^.Msg <> LM_NULL) then
     DeliverMessage(lWinControl, PLMsg^);
+
+  if WinProcess and (wpfLclBeforeWin in HelperFlags) then
+  begin
+    PLMsg^.Result := CallDefaultWindowProc(Window, Msg, WParam, LParam);
+    WinProcess := False;
+  end;
 
   // respond to result of LCL handling the message
   case PLMsg^.Msg of
@@ -2731,6 +2738,21 @@ begin
   Helper.WParam := WParam;
   Helper.LParam := LParam;
   Helper.NMHdr := PNMHdr(LParam);
+  Result := Helper.DoWindowProc;
+end;
+
+function WindowProcEx(Window: HWnd; Msg: UInt; WParam: Windows.WParam;
+  LParam: Windows.LParam; Flags: TWindowProcFlags): LResult; stdcall;
+var
+  Helper: TWindowProcHelper;
+begin
+  FillChar(Helper, SizeOf(TWindowProcHelper), 0);
+  Helper.Window := Window;
+  Helper.Msg := Msg;
+  Helper.WParam := WParam;
+  Helper.LParam := LParam;
+  Helper.NMHdr := PNMHdr(LParam);
+  Helper.HelperFlags:= Flags;
   Result := Helper.DoWindowProc;
 end;
 
