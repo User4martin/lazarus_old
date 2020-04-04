@@ -3457,7 +3457,7 @@ var
   // OldCaptureWinControl: TWinControl;
   NewCaptureWinControl: TWinControl;
 begin
-  //DebugLn('SetCaptureControl Old=',DbgSName(CaptureControl),' New=',DbgSName(Control));
+  DebugLn('SetCaptureControl Old=',DbgSName(CaptureControl),' New=',DbgSName(Control));
   if (CaptureControl=Control) then exit;
 
   if Control = nil then

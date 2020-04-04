@@ -254,6 +254,7 @@ begin
       case PNMHdr(LParam)^.code of
 // #35362: NM_CLICK, NM_RCLICK taken from Lazarus 1.8.4 
         NM_CLICK, NM_RCLICK:
+begin debugln('click');
           if OwnMouseUpNeeded(TCustomListViewAccess(AWinControl)) then
           begin
             // A listview doesn't get a WM_LBUTTONUP, WM_RBUTTONUP message,
@@ -272,6 +273,7 @@ begin
             PostMessage(PNMHdr(LParam)^.hwndFrom, Msg, 0, MakeLParam(Pos.x, Pos.y));
             Result := True;
           end;
+end;
         LVN_GETDISPINFOA, LVN_GETDISPINFOW:
           HandleListViewOwnerData(TCustomListViewAccess(AWinControl));
         NM_CUSTOMDRAW:
@@ -792,14 +794,44 @@ begin
   ItemMsg := CN_DRAWITEM;
 end;
 
+var
+  CurrentListViewInClick: HWND;
+  CurrentListViewInClickState: (clsNone, clsClicked, clsCaptured, clsCaptureLost);
+
 function ListViewProc(Window: HWnd; Msg: UInt; WParam: Windows.WParam;
     LParam: Windows.LParam): LResult; stdcall;
 begin
+  if Window <> CurrentListViewInClick then
+    CurrentListViewInClickState := clsNone;
   case Msg of
     WM_LBUTTONDOWN, WM_RBUTTONDOWN:
       begin
+DebugLnEnter('>>>');
+        CurrentListViewInClick := Window;
+        CurrentListViewInClickState := clsClicked;
         Result := WindowProcEx(Window, Msg, WParam, LParam, [wpfLclBeforeWin]);
-        //Result := WindowProc(Window, Msg, WParam, LParam);
+debugln(['recapture ', ord(CurrentListViewInClickState), ' ',CurrentListViewInClickState = clsCaptureLost]);
+        if CurrentListViewInClickState = clsCaptureLost then
+          SetCapture(window);
+DebugLnExit(['<<<',ord(CurrentListViewInClickState)]);
+        CurrentListViewInClickState := clsNone;
+      end;
+    WM_CAPTURECHANGED:
+      begin
+        case CurrentListViewInClickState of
+          clsClicked:
+            if GetCapture = Window then
+              CurrentListViewInClickState := clsCaptured;
+          clsCaptured:
+            if GetCapture = 0 then
+              CurrentListViewInClickState := clsCaptureLost;
+          clsCaptureLost:
+            if GetCapture <> 0 then
+              CurrentListViewInClickState := clsNone;
+        end;
+debugln(['capture changed ', ord(CurrentListViewInClickState),'raw ', qword( GetCapture), ' win ', Window,'owners  ', FindOwnerControl(GetCapture),' getctrl  ', DbgSName(GetCaptureControl) ]);
+        if not (CurrentListViewInClickState in [clsCaptured, clsCaptureLost]) then
+          Result := WindowProc(Window, Msg, WParam, LParam);
       end;
     else
       begin
