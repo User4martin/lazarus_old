@@ -794,6 +794,15 @@ begin
   ItemMsg := CN_DRAWITEM;
 end;
 
+(* See https://docs.microsoft.com/en-us/windows/win32/controls/listview-message-processing
+   ListView enters its own message processing.
+   This means:
+   - CallDefaultWindowProc (WM_LBUTTONDOWN) will only return, when either the
+     mouse button is released, or dragging started.
+   - Therefore, LCL's DeliverMessage must be called first.
+     This sets CaptureControl for drag detecting (LCL does its own detection)
+   - DefaultWindowProc (WM_LBUTTONDOWN) will undo the capture. It must be restored.
+*)
 var
   CurrentListViewInClick: HWND;
   CurrentListViewInClickState: (clsNone, clsClicked, clsCaptured, clsCaptureLost);
