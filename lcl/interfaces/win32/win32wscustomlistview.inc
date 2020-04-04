@@ -232,17 +232,6 @@ var
   end;
 
 // #35362
-  function OwnMouseUpNeeded(ALV: TCustomListViewAccess): Boolean;
-  var
-    LVInfo: PWin32WindowInfo;
-    ListItem: TListItem;
-  begin
-    LVInfo:= GetWin32WindowInfo(ALV.Handle);
-    ListItem := ALV.GetItemAt(LVInfo^.MouseX, LVInfo^.MouseY);
-    Result := Assigned(ListItem);
-  end;
-
-// #35362
 var
   Pos: TSmallPoint;
 
@@ -254,26 +243,24 @@ begin
       case PNMHdr(LParam)^.code of
 // #35362: NM_CLICK, NM_RCLICK taken from Lazarus 1.8.4 
         NM_CLICK, NM_RCLICK:
-begin debugln('click');
-          if OwnMouseUpNeeded(TCustomListViewAccess(AWinControl)) then
-          begin
-            // A listview doesn't get a WM_LBUTTONUP, WM_RBUTTONUP message,
-            // because it keeps the message in its own event loop,
-            // see msdn article about "Default List-View Message Processing"
-            // therefore we take this notification and create a
-            // LM_LBUTTONUP, LM_RBUTTONUP message out of it
-            WinProcess := False;
-            if PNMHdr(LParam)^.code = NM_CLICK then
-              Msg := LM_LBUTTONUP
-            else
-              Msg := LM_RBUTTONUP;
-            Pos := GetClientCursorPos(PNMHdr(LParam)^.hwndFrom);
-            // to make correct event sequence in LCL we should postpone this message
-            // since we are here after call of CallDefaultWindowProc
-            PostMessage(PNMHdr(LParam)^.hwndFrom, Msg, 0, MakeLParam(Pos.x, Pos.y));
-            Result := True;
-          end;
-end;
+        begin
+debugln('click');
+          // A listview doesn't get a WM_LBUTTONUP, WM_RBUTTONUP message,
+          // because it keeps the message in its own event loop,
+          // see msdn article about "Default List-View Message Processing"
+          // therefore we take this notification and create a
+          // LM_LBUTTONUP, LM_RBUTTONUP message out of it
+          WinProcess := False;
+          if PNMHdr(LParam)^.code = NM_CLICK then
+            Msg := LM_LBUTTONUP
+          else
+            Msg := LM_RBUTTONUP;
+          Pos := GetClientCursorPos(PNMHdr(LParam)^.hwndFrom);
+          // to make correct event sequence in LCL we should postpone this message
+          // since we are here after call of CallDefaultWindowProc
+          PostMessage(PNMHdr(LParam)^.hwndFrom, Msg, 0, MakeLParam(Pos.x, Pos.y));
+          Result := True;
+        end;
         LVN_GETDISPINFOA, LVN_GETDISPINFOW:
           HandleListViewOwnerData(TCustomListViewAccess(AWinControl));
         NM_CUSTOMDRAW:
