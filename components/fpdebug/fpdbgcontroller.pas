@@ -1406,6 +1406,7 @@ begin
            b := FCurrentProcess.GetAndClearPauseRequested;
            AExit := (FCurrentProcess.CurrentBreakpoint <> nil) or
                     ( (FCurrentProcess.CurrentWatchpoint <> nil) and (FCurrentProcess.CurrentWatchpoint <> Pointer(-1)) ) or
+                    ( (FCurrentThread <> nil) and FCurrentThread.PausedAtHardcodeBreakPoint) or
                     (b and (InterLockedExchangeAdd(FPauseRequest, 0) = 1));
          end;
 {        deLoadLibrary :
@@ -1498,12 +1499,18 @@ begin
     deBreakpoint:
       begin
         // If there is no breakpoint AND no pause-request then this is a deferred, allready handled pause request
-        continue := (FCurrentProcess.CurrentBreakpoint = nil) and (CurWatch = nil);
+        continue := (FCurrentProcess.CurrentBreakpoint = nil) and
+                    (CurWatch = nil) and
+                    ( (FCurrentThread = nil) or (not FCurrentThread.PausedAtHardcodeBreakPoint) );
         if (not continue) and assigned(OnHitBreakpointEvent) then begin
-          if (CurWatch <> nil) then
-            OnHitBreakpointEvent(continue, CurWatch);
-          if assigned(FCurrentProcess.CurrentBreakpoint) then
-            OnHitBreakpointEvent(continue, FCurrentProcess.CurrentBreakpoint);
+          if (CurWatch = nil) and (FCurrentProcess.CurrentBreakpoint = nil) then // must be FPausedAtHardcodeBreakPoint
+            OnHitBreakpointEvent(continue, nil)
+          else begin
+            if (CurWatch <> nil) then
+              OnHitBreakpointEvent(continue, CurWatch);
+            if assigned(FCurrentProcess.CurrentBreakpoint) then
+              OnHitBreakpointEvent(continue, FCurrentProcess.CurrentBreakpoint);
+          end;
           if not continue then
             HasPauseRequest := False;
         end;

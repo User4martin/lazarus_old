@@ -171,6 +171,7 @@ type
     FID: Integer;
     FHandle: THandle;
     FPausedAtRemovedBreakPointState: (rbUnknown, rbNone, rbFound{, rbFoundAndDec});
+    FPausedAtHardcodeBreakPoint: Boolean;
     FPausedAtRemovedBreakPointAddress: TDBGPtr;
 
     function GetRegisterValueList: TDbgRegisterValueList;
@@ -190,6 +191,14 @@ type
   public
     constructor Create(const AProcess: TDbgProcess; const AID: Integer; const AHandle: THandle); virtual;
     function HasInsertedBreakInstructionAtLocation(const ALocation: TDBGPtr): Boolean; // include removed breakpoints that (may have) already triggered
+    (* CheckAndResetInstructionPointerAfterBreakpoint
+       This will check if the last instruction was a breakpoint (int3).
+       It must ONLY be called, if the signal indicated that it should have been.
+       Since the previous IP is not known, this assumes the length of the
+         previous asm statement to be the same as the length of int3.
+       If a longer command would end in the signature of int3, then this would
+         detect the int3 (false positive)
+    *)
     procedure CheckAndResetInstructionPointerAfterBreakpoint;
     procedure BeforeContinue; virtual;
     procedure ApplyWatchPoints(AWatchPointData: TFpWatchPointData); virtual;
@@ -213,6 +222,7 @@ type
     property RegisterValueList: TDbgRegisterValueList read GetRegisterValueList;
     property CallStackEntryList: TDbgCallstackEntryList read FCallStackEntryList;
     property StoreStepFuncName: String read FStoreStepFuncName;
+    property PausedAtHardcodeBreakPoint: Boolean read FPausedAtHardcodeBreakPoint;
   end;
   TDbgThreadClass = class of TDbgThread;
 
@@ -2535,19 +2545,28 @@ end;
 procedure TDbgThread.CheckAndResetInstructionPointerAfterBreakpoint;
 var
   t: TDBGPtr;
+  OVal: Byte;
 begin
   // todo: check that the breakpoint is NOT in the temp removed list
   t := GetInstructionPointerRegisterValue;
-  if (t <> 0) and HasInsertedBreakInstructionAtLocation(t - 1)
+  if t = 0 then
+    exit;
+  if HasInsertedBreakInstructionAtLocation(t - 1)
   then begin
     FPausedAtRemovedBreakPointState := rbFound;
     ResetInstructionPointerAfterBreakpoint;
+  end
+  else begin
+    // TODO: allow to skip this, while detaching
+    if FProcess.ReadData(t-1, 1, OVal) then
+      FPausedAtHardcodeBreakPoint := OVal = TDbgProcess.Int3;
   end;
 end;
 
 procedure TDbgThread.BeforeContinue;
 begin
   // On Windows this is only called, if this was the signalled thread
+  FPausedAtHardcodeBreakPoint := False;
   FPausedAtRemovedBreakPointState := rbUnknown;
   FPausedAtRemovedBreakPointAddress := 0;
 end;
