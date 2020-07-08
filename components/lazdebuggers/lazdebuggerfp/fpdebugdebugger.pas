@@ -3837,7 +3837,7 @@ function TFpDebugDebugger.GetLocationRec(AnAddress: TDBGPtr): TDBGLocationRec;
 var
   sym, symproc: TFpSymbol;
 begin
-  if Assigned(FDbgController.CurrentProcess) then
+  if Assigned(FDbgController.CurrentProcess) and (FDbgController.CurrentThread <> nil) then
     begin
     result.FuncName:='';
     result.SrcFile:='';
