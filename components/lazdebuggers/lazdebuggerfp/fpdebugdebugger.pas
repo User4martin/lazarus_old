@@ -754,7 +754,8 @@ begin
     begin
     TFpDebugDebugger(Debugger).PrepareCallStackEntryList(1, ThreadArray[i]);
     CallStack := ThreadArray[i].CallStackEntryList;
-    if ThreadArray[i].ID = TFpDebugDebugger(Debugger).FDbgController.CurrentThread.ID then
+    if (TFpDebugDebugger(Debugger).FDbgController.CurrentThread <> nil) and
+       (ThreadArray[i].ID = TFpDebugDebugger(Debugger).FDbgController.CurrentThread.ID) then
       State := 'stopped'
     else
       State := 'running';

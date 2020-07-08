@@ -165,6 +165,7 @@ type
     FInfo: TCreateProcessDebugInfo;
     FProcProcess: TProcessUTF8;
     FJustStarted, FTerminated: boolean;
+    FInternalPauseThreadId: Cardinal;
     FBitness: TBitness;
     function GetFullProcessImageName(AProcessHandle: THandle): string;
     function GetModuleFileName(AModuleHandle: THandle): string;
@@ -1266,7 +1267,12 @@ begin
   case MDebugEvent.dwDebugEventCode of
     CREATE_THREAD_DEBUG_EVENT :
       begin
-      result := OSDbgClasses.DbgThreadClass.Create(Self, AThreadIdentifier, MDebugEvent.CreateThread.hThread);
+      if AthreadIdentifier = FInternalPauseThreadId then begin
+        Result := nil;
+        FInternalPauseThreadId := 0;
+      end
+      else
+        result := OSDbgClasses.DbgThreadClass.Create(Self, AThreadIdentifier, MDebugEvent.CreateThread.hThread);
       IsMainThread := false;
       end;
     CREATE_PROCESS_DEBUG_EVENT :
@@ -1311,16 +1317,16 @@ function TDbgWinProcess.Pause: boolean;
 var
   hndl: Handle;
   hThread: THandle;
-  NewThreadId: Cardinal;
 begin
   //hndl := OpenProcess(PROCESS_CREATE_THREAD or PROCESS_QUERY_INFORMATION or PROCESS_VM_OPERATION or PROCESS_VM_WRITE or PROCESS_VM_READ, False, TargetPID);
   hndl := OpenProcess(PROCESS_ALL_ACCESS, false, ProcessID);
   PauseRequested:=true;
-  result := DebugBreakProcess(hndl);
+//  result := DebugBreakProcess(hndl);
+result := false;
   if not Result then begin
     DebugLn(DBG_WARNINGS, ['pause failed(1) ', GetLastError]);
     if (_CreateRemoteThread <> nil) and (DebugBreakAddr <> nil) then begin
-      hThread := _CreateRemoteThread(hndl, nil, 0, DebugBreakAddr, nil, 0, NewThreadId);
+      hThread := _CreateRemoteThread(hndl, nil, 0, DebugBreakAddr, nil, 0, FInternalPauseThreadId);
       if hThread = 0 then begin
         DebugLn(DBG_WARNINGS, ['pause failed(2) ', GetLastError]);
       end
