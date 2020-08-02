@@ -45,6 +45,7 @@ type
     FWidgetSetClass: TWSLCLComponentClass;
     FLCLRefCount: integer;
   protected
+    function GetWidgetSetClass: TWSLCLComponentClass; //virtual;
     class procedure WSRegisterClass; virtual;
     class function GetWSComponentClass(ASelf: TLCLComponent): TWSLCLComponentClass; virtual;
   public
@@ -52,12 +53,11 @@ type
     constructor Create(TheOwner: TComponent); override;
     {$ENDIF}
     destructor Destroy; override;
-    class function NewInstance: TObject; override;
     procedure RemoveAllHandlersOfObject(AnObject: TObject); virtual;
     procedure IncLCLRefCount;
     procedure DecLCLRefCount;
     property LCLRefCount: integer read FLCLRefCount;
-    property WidgetSetClass: TWSLCLComponentClass read FWidgetSetClass;
+    property WidgetSetClass: TWSLCLComponentClass read GetWidgetSetClass;
   end;
 
   { TLCLReferenceComponent }
@@ -97,6 +97,26 @@ function WSRegisterLCLComponent: boolean;
 begin
   RegisterWSComponent(TLCLComponent, TWSLCLComponent);
   Result := True;
+end;
+
+function TLCLComponent.GetWidgetSetClass: TWSLCLComponentClass;
+begin
+  Result := FWidgetSetClass;
+  if Result <> nil then
+    exit;
+
+  { Look if already registered. If true set FWidgetSetClass and exit }
+  FWidgetSetClass := FindWSRegistered(TLCLComponentClass(Self.ClassType));
+  if Assigned(FWidgetSetClass) then begin
+    Result := FWidgetSetClass;
+    {$IFDEF VerboseWSBrunoK} inc(cWSLCLDirectHit); {$ENDIF}
+    Exit;
+  end;
+
+  { WSRegisterClass and manage WSLVLClasses list }
+  FWidgetSetClass := GetWSComponentClass(Self);
+  Result := FWidgetSetClass;
+  {$IFDEF VerboseWSBrunoK} inc(cWSLCLRegister); {$ENDIF}
 end;
 
 class procedure TLCLComponent.WSRegisterClass;
@@ -150,22 +170,6 @@ begin
   DebugLCLComponents.MarkDestroyed(Self);
   {$ENDIF}
   inherited Destroy;
-end;
-
-class function TLCLComponent.NewInstance: TObject;
-begin
-  Result := inherited NewInstance;
-
-  { Look if already registered. If true set FWidgetSetClass and exit }
-  TLCLComponent(Result).FWidgetSetClass := FindWSRegistered(Self);
-  if Assigned(TLCLComponent(Result).FWidgetSetClass) then begin
-    {$IFDEF VerboseWSBrunoK} inc(cWSLCLDirectHit); {$ENDIF}
-    Exit;
-  end;
-
-  { WSRegisterClass and manage WSLVLClasses list }
-  TLCLComponent(Result).FWidgetSetClass := GetWSComponentClass(TLCLComponent(Result));
-  {$IFDEF VerboseWSBrunoK} inc(cWSLCLRegister); {$ENDIF}
 end;
 
 procedure TLCLComponent.RemoveAllHandlersOfObject(AnObject: TObject);
