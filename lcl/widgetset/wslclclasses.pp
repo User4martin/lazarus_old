@@ -79,15 +79,17 @@ function IsWSComponentInheritsFrom(const AComponent: TComponentClass;
   InheritFromClass: TWSLCLComponentClass): Boolean;
 procedure RegisterWSComponent(AComponent: TComponentClass;
   AWSComponent: TWSLCLComponentClass; AWSPrivate: TWSPrivateClass = nil);
-procedure RegisterNewWSComp(AComponent: TComponentClass);
+
 // Only for non-TComponent based objects
 function GetWSLazAccessibleObject: TWSObjectClass;
 procedure RegisterWSLazAccessibleObject(const AWSObject: TWSObjectClass);
 function GetWSLazDeviceAPIs: TWSObjectClass;
 procedure RegisterWSLazDeviceAPIs(const AWSObject: TWSObjectClass);
 
-// ~bk Search for already registered classes
+// Search for already registered classes and if not existing
 function FindWSRegistered(const AComponent: TComponentClass): TWSLCLComponentClass;
+function GetWidgetSet(aComponent: TComponentClass): TWSLCLComponentClass;
+procedure WSDoInitialization(aWSRegisterProc : CodePointer);
 
 { Debug : Dump the WSClassesList nodes }
 {$IFDEF VerboseWSBrunoK}
@@ -104,7 +106,8 @@ implementation
 uses
   LCLClasses;
 
-procedure DoInitialization; forward;
+procedure DoRegisterWidgetSet(aComponent: TComponentClass); forward;
+
 
 ////////////////////////////////////////////////////
 // Registration code
@@ -114,8 +117,10 @@ type
   TClassNode = record
     LCLClass: TComponentClass;     { Class of the created instances }
     WSClass: TWSLCLComponentClass; { WidgetSet specific implementation class }
+    WSProtoClass: TClass;          { 'Lateral' parent prototype of WSClass,
+                                     needed for -CR }
     VClass: Pointer;               { Adjusted vmt table to handle WS virtual methods }
-    VClassName: ShortString;       { Class name attibuted when node was create }
+    VClassName: ShortString;       { Class name attibuted when node was created }
     VClassNew: Boolean;            { True Indicates that VClass=Parent.VClass.
                                      When True VClass is not runtime created }
     Parent: PClassNode;
@@ -136,23 +141,32 @@ type
 
   TWSClassesList = class(TFPList)
   private
+    FName : string;
+    FFieldOffset: integer;
     FLastFoundIdx: integer;
-    FLastFoundLCLClass: TComponentClass;
+    FLastFoundClass: TComponentClass;
     function FindWSClass(const AComponent: TComponentClass): TWSLCLComponentClass;
-    function Get(Index: integer): PClassNode; inline;
+    function Get(Index: integer): PClassNode;
     function Search(const aItem: TClass; Out Index: integer): boolean;
     property Items[Index: integer]: PClassNode read Get; { write Put; default; }
-    {$IFDEF VerboseWSBrunoK} {$ENDIF}
     {$IFDEF VerboseWSBrunoK}
     procedure DumpNode(aN : integer; aPClassNode : PClassNode);
     procedure DumpNodes;
     {$ENDIF}
+  public
+    constructor Create(aName : string; aFieldOffset : pointer);
   end;
 
 var
-  WSClassesList: TWSClassesList = nil;
+  WSClassesList: TWSClassesList = nil;  { PClassNode's sorted by TLCLComponentClass
+                                            including internal and leaf nodes }
+  WSVClassesList: TWSClassesList = nil;  { PClassNode's sorted by TWSLCLComponentClass
+                                            Only nodes that have a synthetized vmt }
   WSLazAccessibleObjectClass: TWSObjectClass;
   WSLazDeviceAPIsClass: TWSObjectClass;
+const
+  cWSRegisterOffset : integer = 0; // Offset of WSRegisterClass in TLCLComponent
+                                   // virtual methods table
 
 function FindNodeParent(AComponent: TClass): PClassNode;
 var
@@ -213,19 +227,6 @@ type
 
   TPointerArray = packed array[0..9999999] of Pointer;
   PPointerArray = ^TPointerArray;
-{
-function GetClassNameP(aClassName:string) : Pointer;
-var
-  lLen: integer;
-  lShortStr : shortstring;
-begin
-  lShortStr := aClassName + #0;
-  lLen := Length(lShortStr);
-  SetLength(lShortStr,lLen-1);
-  Result := GetMem(lLen+1);
-  move(lShortStr, Result^, lLen + 2);
-end;
-}
 
 function FindParentWSClassNode(const ANode: PClassNode): PClassNode;
 begin
@@ -409,7 +410,6 @@ function GetPClassNode(AClass: TClass; AWSComponent: TWSLCLComponentClass;
                        aParentGet: boolean; aLeaf: boolean): PClassNode;
 var
   idx: Integer;
-  OldCount: integer;
   lParentNode : PClassNode;
   lClassNode : TClassNode; { A temp local node to fake normal processing
                              of a node that won't be stored aParentGet = 0
@@ -428,6 +428,7 @@ begin
       Result := @lClassNode;
     Result^.LCLClass := TComponentClass(AClass);
     Result^.WSClass := nil;
+    Result^.WSProtoClass := nil;
     Result^.VClass := nil;
     Result^.VClassName := '';
     Result^.VClassNew := aParentGet;
@@ -438,6 +439,7 @@ begin
     if aParentGet then
     begin
       Result^.WSClass := lParentNode^.WSClass;
+      Result^.WSProtoClass := lParentNode^.WSProtoClass;
       Result^.VClass := lParentNode^.VClass;
       PPointer(Result^.VClass + vmtWSPrivate)^ := PPointer(lParentNode^.VClass + vmtWSPrivate)^;
       // Build a VClassName
@@ -498,16 +500,27 @@ var
   Node: PClassNode;
   OldPrivate: TClass;
   idx: Integer;
+  lClassParent : TComponentClass;
 begin
-  if not Assigned(WSClassesList) then
-    DoInitialization;
+  { Handle irregular WSRegisterClass/RegisterWSComponent (bug #0037407) }
+  if cWSRegisterOffset = 0 then
+    with TLCLComponent.Create(nil) do
+      Free;
+  if AComponent <> TLCLComponent then begin
+    lClassParent := TComponentClass(AComponent.ClassParent);
+    if not WSClassesList.Search(lClassParent, idx) then
+      DoRegisterWidgetSet(lClassParent);
+  end;
+
   Node := GetPClassNode(AComponent, AWSComponent, False, True);
   if Node = nil then // No node created
     Exit;
   { If AWSComponent specified but node already exists, nothing more to do. }
   if Assigned(AWSComponent) and (Node^.WSClass = AWSComponent) then
     Exit;
+
   Node^.WSClass := AWSComponent;
+  Node^.WSProtoClass := AWSComponent.ClassParent;
 
   // childclasses "inherit" the private from their parent
   // the child privates should only be updated when their private is still
@@ -522,15 +535,13 @@ begin
   {$ENDIF}
   CreateVClass(Node, AWSPrivate);
 
+  { Save synthetized class to list sorted by VClass. Allows finding the
+    WSProtoClass link for -CR analysis in laz_check_object_ext function }
+  if not WSVClassesList.Search(TClass(Node^.VClass), idx) then
+    WSVClassesList.Insert(idx, Node);
+
   // Since child classes may depend on us, recreate them
   UpdateChildren(Node, OldPrivate);
-end;
-
-// Do not create VClass at runtime but use normal Object Pascal class creation.
-procedure RegisterNewWSComp(AComponent: TComponentClass);
-begin
-  Assert(Assigned(WSClassesList), 'RegisterNewWSComp: WSClassesList=Nil');
-  GetPClassNode(AComponent, Nil, True, True);
 end;
 
 function GetWSLazAccessibleObject: TWSObjectClass;
@@ -555,9 +566,91 @@ end;
 
 function FindWSRegistered(const AComponent: TComponentClass): TWSLCLComponentClass;
 begin
-  if not Assigned(WSClassesList) then
-    DoInitialization;
-  Result := WSClassesList.FindWSClass(AComponent);
+  if Assigned(WSClassesList) then
+    Result := WSClassesList.FindWSClass(AComponent)
+  else
+    Result := nil;
+end;
+
+type
+  WSRegisterMethod = procedure of object;
+
+{ Call all needed inherited WSRegisterClass from the top most unregistered
+  to the aComponent.WSREgistewrClass procedure }
+procedure DoRegisterWidgetSet(aComponent: TComponentClass);
+var
+  lClassParent : tclass;
+  lPSelfWSReg,
+  lPSelfParentWSReg : CodePointer;
+  lRegisterClassMethod : WSRegisterMethod; // Handling of class call in vmt
+  lIdx : integer;
+begin
+  if aComponent<>TLCLComponent then begin
+    lClassParent := aComponent.ClassParent;
+    if not WSClassesList.Search(lClassParent,  lIdx) then
+      DoRegisterWidgetSet(TComponentClass(lClassParent));
+  end;
+  lPSelfWSReg := PCodePointer(Pointer(aComponent)  + cWSRegisterOffset)^;
+  lPSelfParentWSReg := PCodePointer(Pointer(lClassParent) + cWSRegisterOffset)^;
+  if (aComponent=TLCLComponent)
+     or (lPSelfWSReg <> lPSelfParentWSReg)
+  then begin
+    { Do the registration }
+    TMethod(lRegisterClassMethod).Code := PCodePointer(Pointer(aComponent)  + cWSRegisterOffset)^;
+    TMethod(lRegisterClassMethod).Data := aComponent;
+    lRegisterClassMethod;
+  end;
+
+  { Succesfully registered }
+  if WSClassesList.Search(aComponent, lIdx) then
+    Exit;
+
+  { Self.ComponentClass didn't register itself but the parent should now be registered }
+  if lPSelfWSReg = lPSelfParentWSReg then begin
+    if not WSClassesList.Search(lClassParent, lIdx) then
+      { Force creation of intermediate nodes and leaf for parent }
+      GetPClassNode(lClassParent, Nil, True, True);
+  end
+  else
+    { Force creation of intermediate nodes for Self and a leaf node for Self }
+    GetPClassNode(AComponent, Nil, True, True);
+end;
+
+{ Retrieves the WidgetSet for aComponent. If it isn't yet registerd, handle
+  all requested registration }
+function GetWidgetSet(aComponent: TComponentClass): TWSLCLComponentClass;
+var
+  lClassParent : tclass;
+  lPass : integer;
+begin
+  lPass := 0;
+  repeat
+    { Test if directly inherits WSRegisterClass from its parent }
+    lClassParent := aComponent.ClassParent;
+    if (PCodePointer(Pointer(aComponent)  + cWSRegisterOffset)^
+       = PCodePointer(Pointer(lClassParent) + cWSRegisterOffset)^)
+    then begin
+      { Retrieve WidgetSetClass from Parent }
+      Result := WSClassesList.FindWSClass(TComponentClass(lClassParent));
+      if Assigned(Result) then begin
+        {$IFDEF VerboseWSBrunoK} inc(cWSLCLParentHit); {$ENDIF}
+        Break;
+      end;
+    end
+    else begin
+      { Look if already registered. If true set FWidgetSetClass and exit }
+      Result := FindWSRegistered(aComponent);
+      if Assigned(Result) then begin
+        {$IFDEF VerboseWSBrunoK} inc(cWSLCLDirectHit); {$ENDIF}
+        Break;
+      end;
+    end;
+    if lPass > 0 then // Class did not correctly register, return nil
+      Break;
+    {$IFDEF VerboseWSBrunoK} inc(cWSLCLRegister); {$ENDIF}
+    DoRegisterWidgetSet(aComponent);
+    Inc(lPass);
+  until False;
 end;
 
 {$IFDEF VerboseWSBrunoK}
@@ -590,30 +683,27 @@ end;
 { Searches a match for AComponent.ClassType. Returns index in items of
   the matching AComponent or the next bigger one }
 function TWSClassesList.Search(const aItem: TClass; out Index: integer): boolean;
-const
-  cIndex: integer = 0;
 var
   L, R: integer;
-  lLCLClass: TClass;
-  lPClassNode: PClassNode;
+  lClass: TClass;
 begin
   L := 0;
   R := Count - 1;
   // Use binary search.
   if R >= 0 then begin
-    if Pointer(aItem) = Pointer(FLastFoundLCLClass) then begin
+    if (Pointer(aItem) = Pointer(FLastFoundClass)) then begin
       Index := FLastFoundIdx;
       Exit(True);
     end;
     while (L <= R) do begin
       Index := L + ((R - L) div 2);
-      lLCLClass := PClassNode(List^[Index])^.LCLClass;
-      if Pointer(aItem) < Pointer(lLCLClass) then
+      lClass := TClass(PPointer(Pointer(List^[Index])+FFieldOffset)^);
+      if Pointer(aItem) < Pointer(lClass) then
         R := Index - 1
       else begin
-        if aItem = lLCLClass then begin
+        if aItem = lClass then begin
           FLastFoundIdx := Index;
-          FLastFoundLCLClass := TComponentClass(lLCLClass);
+          FLastFoundClass := TComponentClass(lClass);
           Exit(True);
         end;
         L := Index + 1;
@@ -649,10 +739,11 @@ begin
       ParentVClassName := '???';
     writeln(
       aN, ';',
-      { DbgCreateSeq, ';', }
+      DbgCreateSeq, ';',
       HexStr(aPClassNode), ';',
       HexStr(LCLClass), ';',  // : TComponentClass;
       LCLClassClassName, ';',
+      WSProtoClass.ClassName, ';',
       HexStr(WSClass), ';', // : TWSLCLComponentClass;
       lWSClassClassName, ';',
       HexStr(VClass), ';', // : Pointer;
@@ -672,11 +763,15 @@ procedure TWSClassesList.DumpNodes;
 var
   i: integer;
 begin
+  WriteLn(FName, ' tree');
+  i := length(FName)+length(' tree');
+  WriteLn(StringOfChar('=', i));
   WriteLn('n;',          // aN, ';',
-    { 'CreateSeq;',        // DbgCreateSeq, ';', }
+    'CreateSeq;',        // DbgCreateSeq, ';',
     'PClassNode;',        // Node
     'LCLClass;',         // HexStr(LCLClass), ';',  // : TComponentClass;
     'LCLClassName;',     // LCLClassClassName, ';',
+    'WSProtoClass;',
     'WSClass;',          // HexStr(WSClass), ';', // : TWSLCLComponentClass
     'WSClassName;',      // lWSClassClassName, ';',
     'VClass;',           // HexStr(VClass), ';', // : Pointer;
@@ -694,6 +789,13 @@ begin
 end;
 {$ENDIF}
 
+constructor TWSClassesList.Create(aName: string; aFieldOffset: pointer);
+begin
+  inherited Create;
+  FName := aName;
+  FFieldOffset:=Integer(aFieldOffset);
+end;
+
 { TWSLCLComponent }
 
 class function TWSLCLComponent.WSPrivate: TWSPrivateClass;
@@ -707,9 +809,18 @@ class procedure TWSLCLReferenceComponent.DestroyReference(AComponent: TComponent
 begin
 end;
 
-procedure DoInitialization;
+procedure WSDoInitialization(aWSRegisterProc: CodePointer);
+var
+  lPPtrArray : PPointerArray;
+  I : integer;
 begin
-  WSClassesList := TWSClassesList.Create;
+  lPPtrArray := Pointer(TLCLComponent);
+  I := 0;
+  while lPPtrArray^[i]<>aWSRegisterProc do
+    inc(i);
+  cWSRegisterOffset := I * SizeOf(Pointer);
+  WSClassesList := TWSClassesList.Create('WSClassesList', @PClassNode(nil)^.LCLClass);
+  WSVClassesList := TWSClassesList.Create('WSVClassesList', @PClassNode(nil)^.VClass);
 end;
 
 procedure DoFinalization;
@@ -718,6 +829,7 @@ var
   Node: PClassNode;
 begin
   {$IFDEF VerboseWSBrunoK}
+  WSVClassesList.DumpNodes;
   WSClassesList.DumpNodes;
   WriteLn;
   WriteLn('cWSLCLDirectHit=', cWSLCLDirectHit,
@@ -732,6 +844,7 @@ begin
     Dispose(Node);
   end;
   FreeAndNil(WSClassesList);
+  FreeAndNil(WSVClassesList);
   {$IFDEF VerboseWSBrunoK}
   Write('Press enter to quit > '); ReadLn;
   {$ENDIF}
