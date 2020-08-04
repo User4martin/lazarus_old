@@ -22,6 +22,9 @@ unit WSLCLClasses;
 {off$DEFINE VerboseWSRegistration_methods}
 {off$DEFINE VerboseWSRegistration_treedump}
 { Add -dVerboseWSBrunoK switch to compile with $DEFINE VerboseWSBrunoK }
+{.$DEFINE Enable_Check_object_ext} { Reserved for versions of FPC with callback
+                                     to handle Classtype mismatch due to double
+                                     inheritance of TWS<Class> on -CR failure }
 
 interface
 ////////////////////////////////////////////////////
@@ -102,6 +105,9 @@ uses
   LCLClasses;
 
 procedure DoRegisterWidgetSet(aComponent: TComponentClass); forward;
+{$IFDEF Enable_Check_object_ext}
+function  laz_check_object_ext(vmt, expvmt : pointer) : boolean; forward;
+{$ENDIF Enable_Check_object_ext}
 
 
 ////////////////////////////////////////////////////
@@ -843,6 +849,9 @@ begin
   cWSRegisterOffset := I * SizeOf(Pointer);
   LCLClassesList := TRegClassesList.Create('LCLClassesList', @PClassNode(nil)^.LCLClass);
   WSVClassesList := TRegClassesList.Create('WSVClassesList', @PClassNode(nil)^.VClass);
+  {$IFDEF Enable_Check_object_ext}
+  system.LazarusCRCallback := @laz_check_object_ext;
+  {$ENDIF Enable_Check_object_ext}
 end;
 
 procedure DoFinalization;
@@ -871,6 +880,24 @@ begin
   Write('Press enter to quit > '); ReadLn;
   {$ENDIF}
 end;
+
+{$IFDEF Enable_Check_object_ext}
+{ Extend class type verification to handle the double inheritance of the
+  TWSLCLComponents. If the component TWS<Widget><WSLCLClass> is found,
+  check that its 'lateral' component in the TWS<Class> tree matches
+  inheritence constraints. }
+function laz_check_object_ext(vmt, expvmt: pointer) : Boolean;
+var
+  idx : integer;
+  lComponentClass : TComponentClass;
+begin
+  Result := WSVClassesList.Search(TComponentClass(vmt), idx);
+  if Result then begin
+    lComponentClass := TComponentClass(PClassNode(WSVClassesList[idx])^.WSProtoClass);
+    Result := lComponentClass.InheritsFrom(TClass(expvmt));
+  end;
+end;
+{$ENDIF Enable_Check_object_ext}
 
 finalization
   DoFinalization;
