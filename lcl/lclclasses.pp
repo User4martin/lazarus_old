@@ -19,7 +19,7 @@ unit LCLClasses;
 
 {$mode objfpc}{$H+}
 
-{ Add -dVerboseWSBrunoK switch to compile with $DEFINE VerboseWSBrunoK }
+{.$DEFINE RDTSCBenchmarking}
 
 interface
 
@@ -87,6 +87,22 @@ type
 
 implementation
 
+{$IFDEF RDTSCBenchmarking}
+uses
+  SysUtils,
+  uRDTSC in 'D:\fpc-laz\Lazarus\bk_test\LazForum\urdtsc.pas';
+const
+  BenchmarkTotalTicks : QWord = 0;
+
+procedure OnWSLCLFinalize;
+begin
+  WriteLn;
+  Writeln(FormatFloat('CPU speed #0.000', 1 / (1000000 * CpuClockPeriod)) : 6,' GHz ');
+  Writeln('Total time in NewInstance=',RdtscElapsed(0, BenchmarkTotalTicks));
+  Write('Press enter to quit > '); ReadLn;
+end;
+{$ENDIF}
+
 function WSRegisterLCLComponent: boolean;
 begin
   RegisterWSComponent(TLCLComponent, TWSLCLComponent);
@@ -101,6 +117,10 @@ begin
   if cLCLComponentRegistered then
     Exit;
   WSDoInitialization(@TLCLComponent.WSRegisterClass);
+  {$IFDEF RDTSCBenchmarking}
+  CheckCpuSpeed;
+  WSLCLClasses.OnFinalize := @OnWSLCLFinalize;
+  {$ENDIF}
   WSRegisterLCLComponent;
   cLCLComponentRegistered := True;
 end;
@@ -140,11 +160,21 @@ begin
 end;
 
 class function TLCLComponent.NewInstance: TObject;
+{$IFDEF RDTSCBenchmarking}
+var
+  RDTSCStart, RDTSCStop : QWord;
+{$ENDIF}
 begin
   Result := inherited NewInstance;
   if not cLCLComponentRegistered then
     TLCLComponent.WSRegisterClass; { Initialize WSLCLClasses }
+  {$IFDEF RDTSCBenchmarking} RDTSCStart := CPUTickStamp; {$ENDIF}
   TLCLComponent(Result).FWidgetSetClass := {WSLCLClasses.}GetWidgetSet(Self);
+  {$IFDEF RDTSCBenchmarking}
+  RDTSCStop := CPUTickStamp;
+  BenchmarkTotalTicks := (BenchmarkTotalTicks + RDTSCStop) - RDTSCStart
+                          - CPUTickStampCost;
+  {$ENDIF}
 end;
 
 procedure TLCLComponent.RemoveAllHandlersOfObject(AnObject: TObject);

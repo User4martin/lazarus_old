@@ -21,7 +21,8 @@ unit WSLCLClasses;
 {off$DEFINE VerboseWSRegistration}
 {off$DEFINE VerboseWSRegistration_methods}
 {off$DEFINE VerboseWSRegistration_treedump}
-{ Add -dVerboseWSBrunoK switch to compile with $DEFINE VerboseWSBrunoK }
+{.$DEFINE VerboseWSBrunoK }
+{.$DEFINE RDTSCBenchmarking}       { Must match LCLClasses define }
 {.$DEFINE Enable_Check_object_ext} { Reserved for versions of FPC with callback
                                      to handle Classtype mismatch due to double
                                      inheritance of TWS<Class> on -CR failure }
@@ -97,6 +98,11 @@ procedure WSDoInitialization(aWSRegisterProc : CodePointer);
 { Debug : Dump the LCLClassesList nodes }
 {$IFDEF VerboseWSBrunoK}
 procedure DumpWSClassesList;
+{$ENDIF}
+
+{$IFDEF RDTSCBenchmarking}
+const
+  OnFinalize : procedure = nil; // ~bk
 {$ENDIF}
 
 implementation
@@ -879,6 +885,10 @@ begin
   {$IFDEF VerboseWSBrunoK}
   Write('Press enter to quit > '); ReadLn;
   {$ENDIF}
+  {$IFDEF RDTSCBenchmarking}
+  if Assigned(OnFinalize) then
+    OnFinalize; // Collect timing data
+  {$ENDIF RDTSCBenchmarking}
 end;
 
 {$IFDEF Enable_Check_object_ext}
