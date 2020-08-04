@@ -93,11 +93,6 @@ procedure WSDoInitialization(aWSRegisterProc : CodePointer);
 
 { Debug : Dump the WSClassesList nodes }
 {$IFDEF VerboseWSBrunoK}
-const
-  cWSLCLDirectHit : integer = 0;
-  cWSLCLParentHit : integer = 0;
-  cWSLCLRegister : integer = 0;
-
 procedure DumpWSClassesList;
 {$ENDIF}
 
@@ -126,11 +121,17 @@ type
     Parent: PClassNode;
     Child: PClassNode;
     Sibling: PClassNode;
+    {$IFDEF VerboseWSBrunoK} DbgCreateSeq : integer; {$ENDIF}
   end;
 
 const
   // vmtAutoTable is something Delphi 2 and not used, we 'borrow' the vmt entry
   vmtWSPrivate = vmtAutoTable;
+{$IFDEF VerboseWSBrunoK}
+  cWSLCLDirectHit : integer = 0;
+  cWSLCLParentHit : integer = 0;
+  cWSLCLRegister : integer = 0;
+{$ENDIF}
 
 type
 
@@ -145,11 +146,15 @@ type
     FFieldOffset: integer;
     FLastFoundIdx: integer;
     FLastFoundClass: TComponentClass;
+    {$IFDEF VerboseWSBrunoK}
+    FDbgCreateSeq : integer;
+    {$ENDIF}
     function FindWSClass(const AComponent: TComponentClass): TWSLCLComponentClass;
     function Get(Index: integer): PClassNode;
     function Search(const aItem: TClass; Out Index: integer): boolean;
     property Items[Index: integer]: PClassNode read Get; { write Put; default; }
     {$IFDEF VerboseWSBrunoK}
+    procedure Insert(aIndex: Integer; aItem: Pointer);
     procedure DumpNode(aN : integer; aPClassNode : PClassNode);
     procedure DumpNodes;
     {$ENDIF}
@@ -670,10 +675,20 @@ end;
 function TWSClassesList.FindWSClass(const AComponent: TComponentClass): TWSLCLComponentClass;
 var
   I: integer;
+  {$IFDEF VerboseWSBrunoK} lLastIndex : integer; {$ENDIF}
 begin
-  {$IFDEF VerboseWSBrunoK} Write('Searching ', AComponent.ClassName); {$ENDIF}
+  {$IFDEF VerboseWSBrunoK}
+  Write('Searching ', AComponent.ClassName);
+  lLastIndex := FLastFoundIdx;
+  {$ENDIF}
   if Search(AComponent, i) then begin
-    {$IFDEF VerboseWSBrunoK} WriteLn(' -> FOUND'); {$ENDIF}
+    {$IFDEF VerboseWSBrunoK}
+    Write(' -> FOUND');
+    if i = lLastIndex then
+      WriteLn(' : direct hit')
+    else
+      WriteLn;
+    {$ENDIF}
     Exit(TWSLCLComponentClass(Items[i]^.VClass));
   end;
   {$IFDEF VerboseWSBrunoK} WriteLn(' -> NOT FOUND'); {$ENDIF}
@@ -715,6 +730,13 @@ begin
 end;
 
 {$IFDEF VerboseWSBrunoK}
+procedure TWSClassesList.Insert(aIndex: Integer; aItem: Pointer);
+begin
+  PClassNode(aItem)^.DbgCreateSeq := FDbgCreateSeq;
+  inc(FDbgCreateSeq);
+  inherited Insert(aIndex, aItem);
+end;
+
 procedure TWSClassesList.DumpNode(aN: integer; aPClassNode: PClassNode);
 var
   LCLClassClassName, lWSClassClassName, lVClassName, ParentVClassName: string;
@@ -849,7 +871,6 @@ begin
   Write('Press enter to quit > '); ReadLn;
   {$ENDIF}
 end;
-
 
 finalization
   DoFinalization;
