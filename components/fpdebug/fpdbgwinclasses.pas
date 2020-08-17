@@ -136,6 +136,7 @@ type
     FThreadContextChanged: boolean;
     FCurrentContext: PFpContext; // FCurrentContext := Pointer((PtrUInt(@_UnAligendContext) + 15) and not PtrUInt($F));
     _UnAligendContext: TFpContext;
+    FSavedContext: TFpContext;
     procedure LoadRegisterValues; override;
     function GetFpThreadContext(var AStorage: TFpContext; out ACtxPtr: PFpContext; ACtxFlags: TFpWinCtxFlags): Boolean;
     function SetFpThreadContext(ACtxPtr: PFpContext; ACtxFlags: TFpWinCtxFlags = cfSkip): Boolean;
@@ -153,6 +154,8 @@ type
     function ReadThreadState: boolean;
 
     procedure SetRegisterValue(AName: string; AValue: QWord); override;
+    procedure StoreRegisters; override;
+    procedure RestoreRegisters; override;
     function GetInstructionPointerRegisterValue: TDbgPtr; override;
     function GetStackBasePointerRegisterValue: TDbgPtr; override;
     function GetStackPointerRegisterValue: TDbgPtr; override;
@@ -1709,7 +1712,7 @@ end;
 
 procedure TDbgWinThread.SetRegisterValue(AName: string; AValue: QWord);
 begin
-  if ReadThreadState then
+  if not ReadThreadState then
     exit;
 
   {$ifdef cpui386}
@@ -1730,13 +1733,28 @@ begin
   end
   else begin
     case AName of
-      'eip': FCurrentContext^.def.Rip := AValue;
-      'eax': FCurrentContext^.def.Rax := AValue;
+      'rip': FCurrentContext^.def.Rip := AValue;
+      'rax': FCurrentContext^.def.Rax := AValue;
     else
       raise Exception.CreateFmt('Setting the [%s] register is not supported', [AName]);
     end;
   end;
   {$endif}
+  FThreadContextChanged:=True;
+end;
+
+procedure TDbgWinThread.StoreRegisters;
+begin
+  if not ReadThreadState then
+    exit; // TODO: must return error
+  FSavedContext := _UnAligendContext;
+end;
+
+procedure TDbgWinThread.RestoreRegisters;
+begin
+  if not ReadThreadState then
+    exit;
+  _UnAligendContext := FSavedContext;
   FThreadContextChanged:=True;
 end;
 
