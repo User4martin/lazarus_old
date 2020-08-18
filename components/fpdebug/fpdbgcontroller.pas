@@ -412,9 +412,9 @@ constructor TDbgControllerCallRoutineCmd.Create(AController: TDbgController; ARo
 begin
   inherited Create(AController);
 
-  {$IFNDEF Linux}
-  raise Exception.Create('Calling functions is only supported on Linux');
-  {$ENDIF}
+  //{$IFNDEF Linux}
+  //raise Exception.Create('Calling functions is only supported on Linux');
+  //{$ENDIF}
 
   if FController.CurrentProcess.Mode <> dm64 then
     raise Exception.Create('Calling functions is only supported on 64-bits (x86_64)');
