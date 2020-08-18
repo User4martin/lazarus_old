@@ -287,6 +287,9 @@ type
     FCacheThreadId, FCacheStackFrame: Integer;
     FCacheContext: TFpDbgInfoContext;
     //
+    function DoInvokeFunction(AFunction: TFpValue; AParams: array of TFpValue;
+      out AResult: TFpValue): boolean;
+    procedure DoProcessLoop();
     function GetClassInstanceName(AnAddr: TDBGPtr): string;
     function ReadAnsiString(AnAddr: TDbgPtr): string;
     procedure HandleSoftwareException(out AnExceptionLocation: TDBGLocationRec; var continue: boolean);
@@ -2595,6 +2598,50 @@ begin
     end;
 end;
 
+function TFpDebugDebugger.DoInvokeFunction(AFunction: TFpValue;
+  AParams: array of TFpValue; out AResult: TFpValue): boolean;
+var
+  CallContext: TFpDbgInfoCallContext;
+  FuncResultMemLocation: TFpDbgMemLocation;
+  FuncResultVariable: TFpSymbolDwarfFunctionResult;
+begin
+  AResult := nil;
+  // TODO: replace GetContextForEvaluate(ThreadId, StackFrame)
+  CallContext := FDbgController.Call(AFunction.Address, TFpValueDwarf(AFunction).Context, FMemReader, FMemConverter);
+  try
+    ExecuteInDebugThread(@DoProcessLoop);
+
+    FuncResultMemLocation := RegisterLoc(0); // Ordinal values are returned in the rax-register (index = 0);
+    FuncResultVariable := TFpSymbolDwarfFunctionResult.Create(AFunction.DbgSymbol.Name, TDbgDwarfSymbolBase(AFunction.DbgSymbol).InformationEntry, AFunction.Kind, FuncResultMemLocation);
+
+    try
+      // Obtain the value for the function-result:
+      AResult := FuncResultVariable.Value;
+      try
+        // Some magic to set the call-context of the function-result. By doing this
+        // the AResult is evaluated in the context of the situation just
+        // after the function-call.
+        if AResult is TFpValueDwarf then
+          TFpValueDwarf(AResult).Context := CallContext;
+        CallContext.MemManager.DefaultContext := CallContext;
+
+      finally
+        //AResult.ReleaseReference;
+      end;
+    finally
+      FuncResultVariable.ReleaseReference;
+    end;
+  finally
+    //CallContext.ReleaseReference;
+  end;
+
+end;
+
+procedure TFpDebugDebugger.DoProcessLoop();
+begin
+  FDbgController.ProcessLoop;
+end;
+
 function TFpDebugDebugger.EvaluateExpression(AWatchValue: TWatchValue; AExpression: String;
   out AResText: String; out ATypeInfo: TDBGType; EvalFlags: TDBGEvaluateFlags): Boolean;
 var
@@ -2637,6 +2684,7 @@ begin
   APasExpr := nil;
   try
     APasExpr := TFpPascalExpression.Create(AExpression, AContext);
+    APasExpr.OnInvokeFunction := @DoInvokeFunction;
     APasExpr.ResultValue; // trigger full validation
     if not APasExpr.Valid then
       begin

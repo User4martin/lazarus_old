@@ -35,6 +35,8 @@ uses
 
 type
 
+  TFpPascalParserInvokeFunctionCallback = function(AFunction: TFpValue; AParams: array of TFpValue; out AResult: TFpValue): boolean of object;
+
   TFpPascalExpressionPart = class;
   TFpPascalExpressionPartContainer = class;
   TFpPascalExpressionPartWithPrecedence = class;
@@ -54,6 +56,7 @@ type
     FContext: TFpDbgInfoContext;
     FFixPCharIndexAccess: Boolean;
     FHasPCharIndexAccess: Boolean;
+    FOnInvokeFunction: TFpPascalParserInvokeFunctionCallback;
     FTextExpression: String;
     FExpressionPart: TFpPascalExpressionPart;
     FValid: Boolean;
@@ -83,6 +86,7 @@ type
     // - May be a type, if expression is a type
     // - Only valid, as long as the expression is not destroyed
     property ResultValue: TFpValue read GetResultValue;
+    property OnInvokeFunction: TFpPascalParserInvokeFunctionCallback read FOnInvokeFunction write FOnInvokeFunction;
   end;
 
 
@@ -1380,6 +1384,8 @@ end;
 function TFpPascalExpressionPartBracketArgumentList.DoGetResultValue: TFpValue;
 var
   tmp, tmp2: TFpValue;
+  params: Array of TFpValue;
+  i: Integer;
 begin
   Result := nil;
 
@@ -1407,6 +1413,17 @@ begin
       if Result <> nil then
         {$IFDEF WITH_REFCOUNT_DEBUG}Result.DbgRenameReference(nil, 'DoGetResultValue'){$ENDIF};
 
+      exit;
+    end;
+  end;
+
+  if (tmp.Kind = skFunction) and (Expression.OnInvokeFunction <> nil) then begin
+    SetLength(params, Count - 1);
+    for i := 0 to Count - 2 do
+      params[i] := Items[i+1].GetResultValue;
+    Expression.OnInvokeFunction(tmp, params, Result);
+    if Result <> nil then begin
+      {$IFDEF WITH_REFCOUNT_DEBUG}Result.DbgRenameReference(nil, 'DoGetResultValue'){$ENDIF};
       exit;
     end;
   end;
@@ -1560,6 +1577,19 @@ begin
     Result.DbgRenameReference(nil, 'DoGetResultValue')
 {$ENDIF}
   ;
+
+  if (Result <> nil) and
+     (Result.Kind=skFunction) and
+     not(Parent is TFpPascalExpressionPartBracketArgumentList) and
+     (Expression.OnInvokeFunction <> nil)
+  then begin
+    // invoke? or only invoke with ()?
+    (*
+    Expression.OnInvokeFunction(Result, [], Result);
+    if Result <> nil then
+      {$IFDEF WITH_REFCOUNT_DEBUG}Result.DbgRenameReference(nil, 'DoGetResultValue'){$ENDIF};
+    *)
+  end;
 end;
 
 function GetFirstToken(AText: PChar): String;
