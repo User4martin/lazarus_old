@@ -3389,9 +3389,10 @@ end;
  ------------------------------------------------------------------------------}
 function UTF8CompareText(const S1, S2: String): PtrInt;
 var
-  i, Count, Count1, Count2: sizeint;
+  Count, Count1, Count2: sizeint;
   Chr1, Chr2: Char;
   P1, P2: PChar;
+  P1LastBytePointOffset: PChar;
 begin
   Count1 := Length(S1);
   Count2 := Length(S2);
@@ -3399,33 +3400,46 @@ begin
     Count := Count2
   else
     Count := Count1;
-  i := 0;
   if Count>0 then
   begin
     P1 := @S1[1];
     P2 := @S2[1];
-    while i < Count do
+    P1LastBytePointOffset := P1;
+    while Count > 0 do
     begin
-      if (P1^ > #191) or (P2^ > #191) then  // Multi-byte encoding.
-      begin
-        //WriteLn('UTF8CompareText: Calling WideCompareText for "'+S1+'" <> "'+S2+'"');
-        Exit(WideCompareText(UTF8ToUTF16(S1),UTF8ToUTF16(S2)));
-      end;
       Chr1 := P1^;
       Chr2 := P2^;
-      if Chr1 <> Chr2 then
-      begin
-        if Chr1 in ['A'..'Z'] then
-          Inc(Chr1,32);
-        if Chr2 in ['A'..'Z'] then
-          Inc(Chr2,32);
-        if Chr1 <> Chr2 then
-          Break;
-      end;
-      Inc(P1); Inc(P2); Inc(i);
+
+      if Chr1 <> Chr2 then begin
+        if (ord(Chr1) or ord(Chr2)) < 128 then
+        begin
+          P1LastBytePointOffset := P1;
+          if (Chr1 in ['A'..'Z']) then
+            inc(Chr1, $20);
+          if (Chr2 in ['A'..'Z']) then
+            inc(Chr2, $20);
+          if Chr1 <> Chr2 then
+            break;
+        end
+        else
+        begin
+          p2 := p2 + (P1LastBytePointOffset - P1);
+          p1 := P1LastBytePointOffset;
+          Exit(WideCompareText(
+            UTF8ToUTF16(p1, Length(s1) - (p1 - @S1[1])),
+            UTF8ToUTF16(p2, Length(s2) - (p2 - @S2[1]))
+          ));
+        end;
+      end
+      else
+      if (ord(Chr1) or ord(Chr2)) < 128 then
+        P1LastBytePointOffset := P1;
+
+      Inc(P1); Inc(P2);
+      Dec(Count);
     end;
   end;
-  if i < Count then
+  if Count > 0 then
     Result := Byte(Chr1)-Byte(Chr2)
   else
     Result := Count1-Count2;
