@@ -1953,7 +1953,7 @@ var
       end;
       Exit;
     end;
-    Result := (AEvent^.Length > 0) or (GetSpecialChar <> #0);
+    Result := ((not im_context_use) and (AEvent^.Length > 0)) or (GetSpecialChar <> #0);
   end;
   
   function KeyAlreadyHandledByGtk: boolean;
