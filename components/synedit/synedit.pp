@@ -577,6 +577,9 @@ type
     FOnClickLink: TMouseEvent;
     FOnMouseLink: TSynMouseLinkEvent;
     FPendingFoldState: String;
+    {$ifdef LCLGtk2}
+    FIMESelText: string;
+    {$endif}
 
     procedure DoTopViewChanged(Sender: TObject);
     procedure SetScrollOnEditLeftOptions(AValue: TSynScrollOnEditOptions);
@@ -1186,6 +1189,10 @@ type
     property OnSpecialLineColors: TSpecialLineColorsEvent read FOnSpecialLineColors write SetSpecialLineColors;  deprecated;
     property OnSpecialLineMarkup: TSpecialLineMarkupEvent read FOnSpecialLineMarkup write SetSpecialLineMarkup;
     property OnStatusChange: TStatusChangeEvent read fOnStatusChange write fOnStatusChange;
+{$ifdef LCLGtk2}
+  protected
+    procedure GTK_IMComposition(var Message: TMessage); message LM_IM_COMPOSITION;
+{$endif}
   end;
 
   TSynEdit = class(TCustomSynEdit)
@@ -1310,6 +1317,11 @@ type
 procedure Register;
 
 implementation
+
+{$ifdef LCLGtk2}
+uses
+  gtk2, Gtk2Globals;
+{$endif}
 
 var
   LOG_SynMouseEvents: PLazLoggerLogGroup;
@@ -4428,6 +4440,49 @@ function TCustomSynEdit.MarkupCount: Integer;
 begin
   Result := FMarkupManager.Count;
 end;
+
+{$ifdef LCLGtk2}
+procedure TCustomSynEdit.GTK_IMComposition(var Message: TMessage);
+var
+  IMStr:string;
+  i:Integer;
+begin
+  if (not ReadOnly) then
+  begin
+    if (Message.WParam and GTK_IM_FLAG_START<>0) then
+      FIMESelText:=SelText;
+    // to do : accurate candidate position
+    // set candidate position
+    if (Message.WParam and (GTK_IM_FLAG_START or GTK_IM_FLAG_PREEDIT))<>0 then
+      IM_Context_Set_Cursor_Pos(CaretXPix,CaretYPix+LineHeight);
+    // valid string at composition & commit
+    if Message.WParam and (GTK_IM_FLAG_COMMIT or GTK_IM_FLAG_PREEDIT)<>0 then
+    begin
+      // insert preedit or commit string
+      IMStr:=pchar(Message.LParam);
+      for i:=1 to Length(IMStr) do
+        CommandProcessor(ecChar,IMStr[i],nil);
+      // select last preedit
+      if (Message.WParam and GTK_IM_FLAG_COMMIT=0) then
+      begin
+        if Length(IMStr)>0 then
+          for i:=1 to Length(UTF8Decode(IMStr)) do
+            CommandProcessor(ecSelLeft,#0,nil)
+      end
+      else
+        FIMESelText:='';
+    end;
+    // end composition
+    if (Message.WParam and GTK_IM_FLAG_END<>0) and SelAvail then
+    begin
+      ClearSelection;
+      // restore selecttion before preedit.
+      for i:=1 to Length(FIMESelText) do
+        CommandProcessor(ecChar,FIMESelText[i],nil);
+    end;
+  end;
+end;
+{$endif}
 
 procedure TCustomSynEdit.SetCaretTypeSize(AType: TSynCaretType; AWidth, AHeight, AXOffs,
   AYOffs: Integer);
