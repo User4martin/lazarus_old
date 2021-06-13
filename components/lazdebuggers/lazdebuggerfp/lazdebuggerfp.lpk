@@ -13,7 +13,7 @@
         <CompilerMessages>
           <IgnoredMessages idx6058="True" idx3123="True"/>
         </CompilerMessages>
-        <CustomOptions Value="$(IDEBuildOptions)"/>
+        <CustomOptions Value="$(IDEBuildOptions) -al"/>
       </Other>
     </CompilerOptions>
     <Description Value="This package is a debugger backend for the Lazarus-IDE.

@@ -26,6 +26,7 @@
 unit FpDebugDebuggerUtils;
 
 {$mode objfpc}{$H+}
+{$implicitexceptions off}
 
 interface
 

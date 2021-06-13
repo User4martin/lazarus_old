@@ -36,6 +36,7 @@ unit FpDbgDwarf;
 
 {$mode objfpc}{$H+}
 {$TYPEDADDRESS on}
+{ $implicitexceptions off}
 {off $INLINE OFF}
 
 (* Notes:

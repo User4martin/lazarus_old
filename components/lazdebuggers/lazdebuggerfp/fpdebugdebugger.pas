@@ -28,6 +28,7 @@ unit FpDebugDebugger;
 {$mode objfpc}{$H+}
 {$TYPEDADDRESS on}
 {$ModeSwitch advancedrecords}
+{  $implicitexceptions off}
 
 interface
 

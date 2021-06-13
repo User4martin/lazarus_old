@@ -36,6 +36,7 @@ unit FpDbgDwarfDataClasses;
 
 {$mode objfpc}{$H+}
 {$ModeSwitch advancedrecords}
+{$implicitexceptions off}
 //{$INLINE OFF}
 {off $DEFINE USE_ABBREV_TMAP}
 

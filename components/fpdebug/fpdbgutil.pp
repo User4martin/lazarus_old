@@ -34,6 +34,7 @@
 unit FpDbgUtil;
 
 {$mode objfpc}{$H+}
+{ $implicitexceptions off}
 
 interface
 
@@ -234,8 +235,10 @@ begin
     TheFpDbgGlobalWorkerQueue := TFpGlobalThreadWorkerQueue.Create(50);
 
   Result := TheFpDbgGlobalWorkerQueue;
+{ $implicitexceptions off}
 end;
 
+{$implicitexceptions on}
 function dbgsThread: String;
 begin
   if system.ThreadID = Classes.MainThreadID then
@@ -243,6 +246,7 @@ begin
   else
     Result := DbgS(system.ThreadID);
 end;
+{ $implicitexceptions off}
 
 function dbgsWorkItemState(AState: Integer): String;
 begin
