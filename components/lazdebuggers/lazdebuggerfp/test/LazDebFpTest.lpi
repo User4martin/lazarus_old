@@ -15,6 +15,20 @@
     </General>
     <BuildModes Count="1">
       <Item1 Name="Default" Default="True"/>
+      <SharedMatrixOptions Count="12">
+        <Item1 ID="669799163853" Targets="lazutils" Value="-O3"/>
+        <Item2 ID="836846503001" Targets="FpDebug,LazDebuggerFp,LazDebugTestBase,LazUtils,LCL,LCLBase,DebuggerIntf,FCL" Modes="Default" Value="-Criot -Sa -O-"/>
+        <Item3 ID="463245689428" Targets="FpDebug,LazDebuggerFp,LazDebugTestBase,LazUtils,LCL,LCLBase,DebuggerIntf,FCL" Value="-O4 -Si -uWITH_REFCOUNT_DEBUG"/>
+        <Item4 ID="995137255157" Targets="FpDebug,LazDebuggerFp,LazDebugTestBase,LazUtils,LCL,LCLBase,DebuggerIntf,FCL" Value="-CR-r-i-o-t- -Sa- -gt- -uWITH_REFCOUNT_DEBUG"/>
+        <Item5 ID="248294185985" Targets="FpDebug,LazDebuggerFp,LazDebugTestBase,LazUtils,LCL,LCLBase,DebuggerIntf,FCL" Modes="Default" Value="-Si-"/>
+        <Item6 ID="851982763350" Targets="FpDebug,LazDebuggerFp,LazDebugTestBase,LazUtils,LCL,LCLBase,DebuggerIntf,FCL" Value="-O3 -Si- -uWITH_REFCOUNT_DEBUG"/>
+        <Item7 ID="859995973719" Targets="FpDebug,LazDebuggerFp,LazDebugTestBase,LazUtils,LCL,LCLBase,DebuggerIntf,FCL" Value="-uWITH_REFCOUNT_DEBUG"/>
+        <Item8 ID="976786075437" Targets="FpDebug,LazDebuggerFp,LazDebugTestBase,LazUtils,LCL,LCLBase,DebuggerIntf,FCL" Value="-dWITH_REFCOUNT_DEBUG"/>
+        <Item9 ID="967716299923" Targets="FpDebug,LazDebuggerFp,LazDebugTestBase,DebuggerIntf" Modes="Default" Value="-CRriot"/>
+        <Item10 ID="707300989454" Targets="FpDebug,LazDebuggerFp,LazDebugTestBase,DebuggerIntf" Value="-Crit -Sa"/>
+        <Item11 ID="576126082708" Targets="FpDebug,LazDebuggerFp,LazDebugTestBase,DebuggerIntf" Value="-OoNOPEEPHOLE"/>
+        <Item12 ID="801912063171" Targets="FpDebug,LazDebuggerFp,LazDebugTestBase,DebuggerIntf" Value="-Si- -g-"/>
+      </SharedMatrixOptions>
     </BuildModes>
     <PublishOptions>
       <Version Value="2"/>
